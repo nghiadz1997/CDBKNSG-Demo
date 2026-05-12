@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Indoor Nav PRO - Multi-Area & Cloud Sync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes dash { to { stroke-dashoffset: -20; } }
+        .route-line { 
+            stroke-dasharray: 10, 5; 
+            animation: dash 1s linear infinite; 
+            filter: drop-shadow(0 0 5px rgba(249, 115, 22, 0.6));
+        }
+        
+        html, body {
+            overflow: hidden;
+            width: 100%; height: 100%;
+            margin: 0; padding: 0;
+            touch-action: none; /* Khóa cuộn trang mặc định để ưu tiên di chuyển map */
+        }
+
+        #viewport {
+            overflow: hidden;
+            width: 100%; height: 100%;
+            cursor: grab;
+            background-color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            touch-action: none; /* Đảm bảo viewport nhận diện touch 100% */
+        }
+
+        #viewport:active { cursor: grabbing; }
+
+        #main-sidebar {
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 150;
+        }
+        
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+
+        @media (max-width: 768px) {
+            #main-sidebar {
+                position: fixed; left: 0; top: 0; height: 100%;
+                width: 280px;
+            }
+        }
+
+        .node-ui { 
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.4s ease; 
+            cursor: pointer; 
+            pointer-events: auto;
+        }
+        
+        .node-ui::after {
+            content: '';
+            position: absolute; width: 40px; height: 40px;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            border-radius: 50%;
+        }
+
+        .dragging { opacity: 0.5 !important; z-index: 1000 !important; transition: none !important; }
+        
+        .nav-start .node-icon { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.5); }
+        .nav-end .node-icon { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.5); }
+
+        #map-container {
+            width: 1200px; height: 800px;
+            position: relative; transform-origin: center center;
+            will-change: transform;
+            flex-shrink: 0;
+            display: block;
+        }
+
+        .node-label {
+            font-size: 5.5px; 
+            padding: 0.5px 2.5px; 
+            line-height: 1; 
+            pointer-events: none;
+            letter-spacing: -0.2px;
+        }
+
+        .floating-ctrl {
+            position: absolute;
+            z-index: 140;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            bottom: 20px;
+            right: 20px;
+        }
+
+        .ctrl-btn {
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        #toggle-sidebar-btn {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            z-index: 200;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* Area Grouping Styles */
+    .area-header {
+        border-left: 3px solid #6366f1;
+        padding-left: 8px;
+        margin-top: 15px;
+        margin-bottom: 5px;
+        color: #475569;
+        font-weight: 800;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Styling for optgroup labels in select */
+    select optgroup {
+        font-size: 10px;
+        text-transform: uppercase;
+        color: #6366f1;
+        background: #f8fafc;
+        font-weight: 800;
+    }
+
+    select option {
+        font-size: 13px;
+        color: #1e293b;
+        padding: 8px;
+        background: white;
+    }
+    </style>
+</head>
+<body class="bg-slate-200 text-slate-800 font-sans">
+
+<div id="msg-box" class="px-6 py-3 bg-indigo-600 text-white rounded-full text-xs font-bold shadow-2xl transition-all duration-300"></div>
+
+<div class="flex h-screen w-screen relative overflow-hidden">
+    
+    <button id="toggle-sidebar-btn" class="active:scale-90 transition-transform">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+
+    <aside id="main-sidebar" class="w-80 bg-white border-r flex flex-col shadow-2xl sidebar-hidden md:sidebar-visible">
+        <div class="p-6 border-b bg-gradient-to-br from-indigo-700 to-violet-800 text-white flex justify-between items-center">
+            <div>
+                <h1 class="font-bold text-lg leading-tight">Indoor Nav PRO</h1>
+                <p class="text-[10px] opacity-70 uppercase tracking-widest text-orange-300">Multi-Area v7.1</p>
+            </div>
+            <button id="close-sidebar-mobile" class="md:hidden text-white/50 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div id="sidebar-content" class="flex-1 overflow-y-auto p-5 space-y-4">
+            <!-- ADMIN TOOLS -->
+            <div id="admin-tools" class="hidden space-y-4 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100">
+                <div class="flex items-center justify-between border-b border-indigo-100 pb-2">
+                    <span class="text-[10px] font-bold text-indigo-500 uppercase">Quản trị</span>
+                    <button id="btn-logout" class="text-red-500 text-xs font-bold">Thoát</button>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button data-mode="select" class="tool-btn p-2 rounded-xl border bg-indigo-600 text-white flex flex-col items-center gap-1">
+                        <span class="text-[9px] font-bold uppercase">Kéo</span>
+                    </button>
+                    <button data-mode="add" class="tool-btn p-2 rounded-xl border bg-white text-slate-500 flex flex-col items-center gap-1">
+                        <span class="text-[9px] font-bold uppercase">Thêm</span>
+                    </button>
+                    <button data-mode="connect" class="tool-btn p-2 rounded-xl border bg-white text-slate-500 flex flex-col items-center gap-1">
+                        <span class="text-[9px] font-bold uppercase">Nối</span>
+                    </button>
+                </div>
+                <button id="btn-save-all" class="w-full py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
+                    LƯU THAY ĐỔI
+                </button>
+            </div>
+
+            <!-- FLOORS GROUPED BY AREA -->
+            <div class="space-y-1">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Danh mục tầng</span>
+                <div id="floor-list" class="flex flex-col gap-1"></div>
+            </div>
+
+            <!-- NAVIGATION -->
+            <div class="space-y-4 pt-4 border-t">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Chỉ đường</span>
+                <div class="space-y-3">
+                    <select id="select-start" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"></select>
+                    <select id="select-end" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"></select>
+                    <div class="flex gap-2 pt-1">
+                        <button id="btn-find-path" class="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-all">TÌM ĐƯỜNG</button>
+                        <button id="btn-clear-path" class="hidden p-3 bg-slate-100 text-slate-500 rounded-xl border border-slate-200 hover:bg-slate-200">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-4 bg-slate-50 border-t text-[10px] text-slate-400 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span id="sync-status" class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                <span id="sync-text" class="font-bold uppercase text-[8px]">Connecting</span>
+            </div>
+            <span id="secret-login-trigger" class="font-bold uppercase text-[8px] cursor-pointer hover:text-indigo-500 select-none transition-colors">v7.1 CLOUD</span>
+        </div>
+    </aside>
+
+    <main id="viewport">
+        <div class="floating-ctrl">
+            <button id="btn-rotate" class="ctrl-btn active:scale-90" title="Xoay 90 độ">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+            </button>
+            <button id="btn-recenter" class="ctrl-btn active:scale-90" title="Về trung tâm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+        </div>
+
+        <div id="map-container" class="bg-white shadow-2xl rounded-lg overflow-visible">
+            <img id="map-image" src="" alt="Sơ đồ" class="w-full h-full object-fill rounded-lg pointer-events-none">
+            <svg id="svg-layer" class="absolute inset-0 w-full h-full pointer-events-none overflow-visible"></svg>
+            <div id="nodes-layer" class="absolute inset-0 pointer-events-none"></div>
+        </div>
+
+        <div id="next-floor-prompt" class="hidden absolute bottom-8 left-1/2 -translate-x-1/2 glass-morphism p-4 rounded-2xl shadow-xl border border-white flex items-center gap-4 animate-bounce z-50">
+            <p id="prompt-text" class="text-xs font-bold text-slate-800 uppercase tracking-tighter">Tiếp theo: Tầng X</p>
+            <button id="btn-switch-floor" class="bg-orange-500 text-white px-4 py-2 rounded-xl text-[10px] font-black shadow-lg">CHUYỂN TẦNG</button>
+        </div>
+    </main>
+
+    <!-- LOGIN MODAL -->
+    <div id="login-modal" class="hidden fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl p-8 shadow-2xl w-full max-w-xs text-center space-y-6">
+            <h2 class="text-xl font-bold">Xác thực Quản trị</h2>
+            <input id="admin-password" type="password" placeholder="Mật khẩu" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-center outline-none focus:ring-2 focus:ring-indigo-500 font-bold tracking-widest">
+            <div class="flex gap-2">
+                <button id="btn-login-cancel" class="flex-1 py-3 text-slate-400 font-bold hover:bg-slate-50 rounded-xl transition-colors">Hủy</button>
+                <button id="btn-login-confirm" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROPERTIES PANEL (Admin only) -->
+    <div id="props-panel" class="hidden absolute bottom-6 right-6 md:top-6 md:right-6 w-[280px] bg-white rounded-2xl shadow-2xl border p-4 space-y-4 z-[160]">
+        <div class="flex justify-between items-center border-b pb-2">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cài đặt Điểm</span>
+            <button id="btn-close-props" class="text-slate-300 hover:text-slate-600">✕</button>
+        </div>
+        <div class="space-y-1">
+            <label class="text-[9px] font-bold text-slate-400 uppercase">Tên hiển thị</label>
+            <input id="node-label-input" type="text" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold outline-none">
+        </div>
+        <div class="space-y-2">
+            <label class="text-[9px] font-bold text-slate-400 uppercase">Kích thước</label>
+            <div class="grid grid-cols-3 gap-2">
+                <button id="btn-size-small" class="size-opt p-1.5 border rounded-lg text-[8px] font-bold">NHỎ</button>
+                <button id="btn-size-medium" class="size-opt p-1.5 border rounded-lg text-[8px] font-bold">VỪA</button>
+                <button id="btn-size-large" class="size-opt p-1.5 border rounded-lg text-[8px] font-bold">TO</button>
+            </div>
+        </div>
+        <div class="space-y-2">
+            <label class="text-[9px] font-bold text-slate-400 uppercase">Phân loại</label>
+            <div class="grid grid-cols-2 gap-2">
+                <button id="btn-type-location" class="type-opt p-2 border rounded-lg text-[9px] font-black">📍 VỊ TRÍ</button>
+                <button id="btn-type-waypoint" class="type-opt p-2 border rounded-lg text-[9px] font-black">⚪ NỐI</button>
+                <button id="btn-type-stairs" class="type-opt p-2 border rounded-lg text-[9px] font-black">🪜 THANG</button>
+                <button id="btn-type-elevator" class="type-opt p-2 border rounded-lg text-[9px] font-black">🛗 MÁY</button>
+            </div>
+        </div>
+        <button id="btn-delete-node" class="w-full py-2 bg-red-50 text-red-500 text-[10px] font-black rounded-lg border border-red-100 hover:bg-red-500 hover:text-white transition-all">XÓA NODE</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDi5gsOdE9tGOR6JQzMgw_9QscD-XBRNwk",
+        authDomain: "alook-26a1f.firebaseapp.com",
+        projectId: "alook-26a1f",
+        storageBucket: "alook-26a1f.appspot.com",
+        messagingSenderId: "201575321450",
+        appId: "1:201575321450:web:3f00cdd591af0d5e52df13"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'indoor-nav-v5-pro';
+    const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'mapState', 'main');
+
+    const MAP_WIDTH = 1200, MAP_HEIGHT = 800;
+    let nodes = {}, edges = [], currentFloorId = 'A-G', isAdmin = false, mode = 'select', selectedId = null, route = [];
+    let activeStart = null, activeEnd = null; 
+    let view = { x: 0, y: 0, scale: 1, rotation: 0 }; 
+    let isPanning = false, lastMousePos = { x: 0, y: 0 };
+    let lastTouchDist = 0; 
+    let user = null, loginClickCount = 0;
+
+    const floors = [
+        { id: 'A-G', area: 'Khu A', name: 'Tầng Trệt', image: 'img/map.png' },
+        { id: 'A-1', area: 'Khu A', name: 'Tầng 1', image: 'img/tang1.png' },
+        { id: 'A-2', area: 'Khu A', name: 'Tầng 2', image: 'img/tang2.png' },
+        
+        { id: 'B-G', area: 'Khu B', name: 'Tầng Trệt', image: 'https://placehold.co/1200x800/4f46e5/ffffff?text=Khu+B+-+Tang+Tret' },
+        { id: 'B-1', area: 'Khu B', name: 'Tầng 1', image: 'https://placehold.co/1200x800/4f46e5/ffffff?text=Khu+B+-+Tang+1' },
+        { id: 'B-2', area: 'Khu B', name: 'Tầng 2', image: 'https://placehold.co/1200x800/4f46e5/ffffff?text=Khu+B+-+Tang+2' },
+        { id: 'B-3', area: 'Khu B', name: 'Tầng 3', image: 'https://placehold.co/1200x800/4f46e5/ffffff?text=Khu+B+-+Tang+3' },
+        { id: 'B-4', area: 'Khu B', name: 'Tầng 4', image: 'https://placehold.co/1200x800/4f46e5/ffffff?text=Khu+B+-+Tang+4' },
+        
+        { id: 'C-G', area: 'Khu C', name: 'Tầng Trệt', image: 'https://placehold.co/1200x800/ef4444/ffffff?text=Khu+C+-+Tang+Tret' },
+        
+        { id: 'D-G', area: 'Khu D', name: 'Tầng Trệt', image: 'https://placehold.co/1200x800/f59e0b/ffffff?text=Khu+D+-+Tang+Tret' },
+        { id: 'D-1', area: 'Khu D', name: 'Tầng 1', image: 'https://placehold.co/1200x800/f59e0b/ffffff?text=Khu+D+-+Tang+1' }
+    ];
+
+    const viewport = document.getElementById('viewport');
+    const mapContainer = document.getElementById('map-container');
+    const mapImage = document.getElementById('map-image');
+    const svgLayer = document.getElementById('svg-layer');
+    const nodesLayer = document.getElementById('nodes-layer');
+    const sidebar = document.getElementById('main-sidebar');
+    const selectStart = document.getElementById('select-start');
+    const selectEnd = document.getElementById('select-end');
+    const propsPanel = document.getElementById('props-panel');
+    const loginModal = document.getElementById('login-modal');
+    const syncStatus = document.getElementById('sync-status');
+    const syncText = document.getElementById('sync-text');
+    const msgBox = document.getElementById('msg-box');
+
+    function showMsg(txt, isSuccess = true) {
+        msgBox.innerText = txt;
+        msgBox.className = `px-6 py-3 rounded-full text-xs font-bold shadow-2xl fixed top-8 left-1/2 -translate-x-1/2 z-[1000] text-white ${isSuccess ? 'bg-green-600' : 'bg-red-600'}`;
+        msgBox.style.display = 'block';
+        setTimeout(() => { msgBox.style.display = 'none'; }, 3000);
+    }
+
+    async function initCloudSync() {
+        try {
+            await signInAnonymously(auth);
+            onAuthStateChanged(auth, (u) => {
+                user = u;
+                if (u) {
+                    onSnapshot(stateDocRef, (doc) => {
+                        if (doc.exists()) {
+                            const data = doc.data();
+                            nodes = data.nodes || {};
+                            try {
+                                edges = typeof data.edges === 'string' ? JSON.parse(data.edges) : (data.edges || []);
+                            } catch (e) { edges = []; }
+                            activeStart = data.activeStart || null;
+                            activeEnd = data.activeEnd || null;
+                            
+                            if(data.rotation !== undefined && data.rotation !== view.rotation && !isPanning) {
+                                view.rotation = data.rotation;
+                                applyTransform();
+                            }
+                            sanitizeConnections();
+                            updateUI();
+                            
+                            if (activeStart && activeEnd) {
+                                calculateRouteLocally(activeStart, activeEnd);
+                                selectStart.value = activeStart;
+                                selectEnd.value = activeEnd;
+                                document.getElementById('btn-clear-path').classList.remove('hidden');
+                            } else {
+                                route = []; selectStart.value = ""; selectEnd.value = "";
+                                document.getElementById('btn-clear-path').classList.add('hidden');
+                            }
+                            syncStatus.className = 'w-2 h-2 rounded-full bg-green-500';
+                            syncText.innerText = 'Synced';
+                        }
+                    }, (err) => {
+                        syncStatus.className = 'w-2 h-2 rounded-full bg-red-500';
+                        syncText.innerText = 'Error';
+                    });
+                }
+            });
+        } catch (e) { console.error("Auth error:", e); }
+    }
+
+    function sanitizeConnections() {
+        Object.values(nodes).forEach(n => n.connections = []);
+        edges.forEach(([id1, id2]) => {
+            if(nodes[id1] && nodes[id2]) {
+                if(!nodes[id1].connections.includes(id2)) nodes[id1].connections.push(id2);
+                if(!nodes[id2].connections.includes(id1)) nodes[id2].connections.push(id1);
+            }
+        });
+    }
+
+    async function saveData(silent = false) {
+        if (!user) return;
+        syncStatus.className = 'w-2 h-2 rounded-full bg-blue-500 animate-pulse';
+        syncText.innerText = 'Saving';
+        try {
+            const dataToSave = { nodes, edges: JSON.stringify(edges), activeStart, activeEnd, rotation: view.rotation };
+            await setDoc(stateDocRef, dataToSave);
+            if (!silent) showMsg("Đã lưu bản đồ thành công!");
+            syncStatus.className = 'w-2 h-2 rounded-full bg-green-500';
+            syncText.innerText = 'Synced';
+        } catch (e) { showMsg("Lỗi khi lưu dữ liệu!", false); }
+    }
+
+    function calculateRouteLocally(s, e) {
+        if(!nodes[s] || !nodes[e]) return;
+        const q = [[s]], visited = new Set();
+        while(q.length > 0) {
+            const p = q.shift(), nodeId = p[p.length-1];
+            if(nodeId === e) { 
+                route = p; 
+                renderEdges(); renderNodes(); checkNextFloorPrompt(); 
+                return; 
+            }
+            if(!visited.has(nodeId)) {
+                visited.add(nodeId);
+                if (nodes[nodeId]?.connections) {
+                    nodes[nodeId].connections.forEach(nId => { if(nodes[nId]) q.push([...p, nId]) });
+                }
+            }
+        }
+        route = [];
+    }
+
+    function applyTransform() { 
+        mapContainer.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale}) rotate(${view.rotation}deg)`; 
+    }
+
+    function setupInitialView() {
+        const vW = viewport.clientWidth, vH = viewport.clientHeight;
+        const pad = 20;
+        const sX = (vW - pad) / MAP_WIDTH;
+        const sY = (vH - pad) / MAP_HEIGHT;
+        view.scale = Math.min(sX, sY, 1);
+        view.x = (vW - MAP_WIDTH * view.scale) / 2;
+        view.y = (vH - MAP_HEIGHT * view.scale) / 2;
+        applyTransform();
+    }
+
+    function updateUI() {
+        const floorListEl = document.getElementById('floor-list');
+        floorListEl.innerHTML = '';
+        
+        const areas = [...new Set(floors.map(f => f.area))];
+        areas.forEach(area => {
+            const areaHeader = document.createElement('div');
+            areaHeader.className = 'area-header';
+            areaHeader.innerText = area;
+            floorListEl.appendChild(areaHeader);
+            
+            floors.filter(f => f.area === area).forEach(f => {
+                const btn = document.createElement('button');
+                btn.onclick = () => window.changeFloor(f.id);
+                btn.className = `w-full flex items-center justify-between p-3.5 rounded-xl transition-all ${currentFloorId === f.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`;
+                btn.innerHTML = `
+                    <span class="text-[10px] font-bold uppercase">${f.name}</span>
+                    ${currentFloorId === f.id ? '<div class="w-1.5 h-1.5 bg-white rounded-full animate-ping"></div>' : ''}
+                `;
+                floorListEl.appendChild(btn);
+            });
+        });
+        
+        const currentFloor = floors.find(x => x.id === currentFloorId);
+        if (mapImage.getAttribute('src') !== currentFloor.image) {
+            mapImage.src = currentFloor.image;
+        }
+
+        renderNodes(); renderEdges(); updateSelectOptions(); checkNextFloorPrompt();
+    }
+
+    window.changeFloor = (id) => { currentFloorId = id; updateUI(); };
+
+    function updateSelectOptions() {
+        const locations = Object.values(nodes).filter(n => (n.type === 'location' || n.type === 'stairs' || n.type === 'elevator') && n.label);
+        let optionsHtml = '<option value="">-- CHỌN VỊ TRÍ --</option>';
+        const areas = [...new Set(floors.map(f => f.area))];
+        
+        areas.forEach(area => {
+            const floorsInArea = floors.filter(f => f.area === area);
+            const floorIdsInArea = floorsInArea.map(f => f.id);
+            const nodesInArea = locations.filter(n => floorIdsInArea.includes(n.floor))
+                                         .sort((a, b) => a.label.localeCompare(b.label));
+
+            if (nodesInArea.length > 0) {
+                optionsHtml += `<optgroup label="--- ${area.toUpperCase()} ---">`;
+                nodesInArea.forEach(n => {
+                    const floorObj = floors.find(f => f.id === n.floor);
+                    const floorName = floorObj ? floorObj.name : n.floor;
+                    optionsHtml += `<option value="${n.id}">${n.label.toUpperCase()} (${floorName})</option>`;
+                });
+                optionsHtml += `</optgroup>`;
+            }
+        });
+
+        const sVal = selectStart.value, eVal = selectEnd.value;
+        selectStart.innerHTML = optionsHtml; selectEnd.innerHTML = optionsHtml;
+        if(nodes[sVal]) selectStart.value = sVal; if(nodes[eVal]) selectEnd.value = eVal;
+    }
+
+    function renderNodes() {
+        nodesLayer.innerHTML = '';
+        Object.values(nodes).filter(n => n.floor === currentFloorId).forEach(node => {
+            const isSelected = selectedId === node.id;
+            const isNavStart = selectStart.value === node.id;
+            const isNavEnd = selectEnd.value === node.id;
+
+            if (!isAdmin && node.type === 'waypoint') return;
+
+            /* LOGIC ẨN CÁC VỊ TRÍ XUNG QUANH KHI TÌM ĐƯỜNG (Đối với User) */
+            let isVisible = true;
+            let showLabel = isAdmin;
+
+            if (!isAdmin) {
+                if (route.length > 0) {
+                    // KHI ĐÃ CÓ LỘ TRÌNH: Chỉ hiện duy nhất Điểm đầu và Điểm cuối
+                    if (isNavStart || isNavEnd) {
+                        isVisible = true;
+                        showLabel = true;
+                    } else {
+                        isVisible = false; // Ẩn sạch các điểm trung gian và điểm xung quanh
+                    }
+                } else {
+                    // KHI CHƯA CÓ LỘ TRÌNH: Hiện tất cả các điểm ở dạng nhỏ để người dùng bấm
+                    if (node.type === 'location' || node.type === 'stairs' || node.type === 'elevator') {
+                        isVisible = true;
+                        showLabel = false; 
+                    } else {
+                        isVisible = false;
+                    }
+                }
+            }
+
+            if (!isVisible) return;
+
+            const div = document.createElement('div');
+            let stateClass = isSelected ? (mode === 'connect' ? 'connect-source' : 'selected') : '';
+            if (isNavStart) stateClass += ' nav-start';
+            if (isNavEnd) stateClass += ' nav-end';
+
+            div.className = `node-ui absolute flex flex-col items-center z-10 ${stateClass}`;
+            div.style.left = `${node.x}px`; div.style.top = `${node.y}px`;
+            div.style.transform = `translate(-50%, -50%) rotate(${-view.rotation}deg)`; 
+
+            let bS = 1.5; 
+            if (isAdmin) {
+                if (node.size === 'small') bS = 1.5; else if (node.size === 'large') bS = 3.5; else bS = 2.5;
+            }
+
+            let icon = '', color = 'bg-slate-400';
+            if(node.type === 'location') { color = 'bg-slate-800'; icon = '📍'; }
+            else if(node.type === 'stairs') { color = 'bg-amber-500'; icon = '🪜'; }
+            else if(node.type === 'elevator') { color = 'bg-sky-500'; icon = '🛗'; }
+
+            if(isNavStart) color = 'bg-green-500 ring-2 ring-green-100';
+            if(isNavEnd) color = 'bg-red-500 ring-2 ring-red-100';
+
+            // Kích thước điểm khi người dùng chưa tìm đường (chế độ bấm trực tiếp)
+            if (!isAdmin && route.length === 0) bS = 1.2; 
+            
+            // Kích thước điểm đầu và cuối khi đang dẫn đường (phóng to để nhìn đẹp hơn)
+            if (!isAdmin && (isNavStart || isNavEnd)) bS = 2;
+
+            div.innerHTML = `
+                <div class="node-icon rounded-full border-2 border-white ${color} flex items-center justify-center shadow-md text-white overflow-hidden" style="width: ${bS * 6}px; height: ${bS * 6}px; font-size: ${bS * 3}px;">
+                    ${icon}
+                </div>
+                ${showLabel ? `
+                    <div class="node-label mt-0.5 bg-white/95 px-1 py-0.5 rounded shadow-sm border border-slate-100 font-black text-slate-800 whitespace-nowrap">
+                        ${node.label.toUpperCase()}
+                    </div>
+                ` : ''}
+            `;
+
+            let sX, sY, hM = false;
+            let startNodeX, startNodeY; 
+
+            const onS = (cX, cY) => {
+                if (!isAdmin) return;
+                sX = cX; sY = cY; hM = false;
+                startNodeX = nodes[node.id].x; 
+                startNodeY = nodes[node.id].y;
+
+                const onM = (me) => {
+                    const curX = me.touches ? me.touches[0].clientX : me.clientX;
+                    const curY = me.touches ? me.touches[0].clientY : me.clientY;
+                    if (Math.abs(curX - sX) > 2 || Math.abs(curY - sY) > 2) {
+                        if (mode === 'select') {
+                            hM = true; div.classList.add('dragging');
+                            let dx = (curX - sX) / view.scale;
+                            let dy = (curY - sY) / view.scale;
+                            const rad = -view.rotation * (Math.PI / 180);
+                            const rotatedDx = dx * Math.cos(rad) - dy * Math.sin(rad);
+                            const rotatedDy = dx * Math.sin(rad) + dy * Math.cos(rad);
+                            nodes[node.id].x = startNodeX + rotatedDx;
+                            nodes[node.id].y = startNodeY + rotatedDy;
+                            div.style.left = `${nodes[node.id].x}px`; 
+                            div.style.top = `${nodes[node.id].y}px`;
+                            renderEdges();
+                        }
+                    }
+                };
+                const onE = () => {
+                    window.removeEventListener('mousemove', onM); window.removeEventListener('mouseup', onE);
+                    window.removeEventListener('touchmove', onM); window.removeEventListener('touchend', onE);
+                    if (hM) { div.classList.remove('dragging'); saveData(true); } else handleNodeClick(node.id);
+                };
+                window.addEventListener('mousemove', onM); window.addEventListener('mouseup', onE);
+                window.addEventListener('touchmove', onM, {passive:false}); window.addEventListener('touchend', onE);
+            };
+            div.onmousedown = (e) => { e.stopPropagation(); onS(e.clientX, e.clientY); };
+            div.ontouchstart = (e) => { e.stopPropagation(); onS(e.touches[0].clientX, e.touches[0].clientY); };
+            div.onclick = (e) => { if(!isAdmin) { e.stopPropagation(); handleNodeClick(node.id); } };
+            nodesLayer.appendChild(div);
+        });
+    }
+
+    function renderEdges() {
+        svgLayer.innerHTML = '';
+        if (isAdmin) {
+            edges.forEach(edge => {
+                const n1 = nodes[edge[0]], n2 = nodes[edge[1]];
+                if (n1 && n2 && n1.floor === currentFloorId && n2.floor === currentFloorId) {
+                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    line.setAttribute("x1", n1.x); line.setAttribute("y1", n1.y);
+                    line.setAttribute("x2", n2.x); line.setAttribute("y2", n2.y);
+                    line.setAttribute("stroke", "#cbd5e1"); line.setAttribute("stroke-width", "1");
+                    line.setAttribute("stroke-dasharray", "3");
+                    svgLayer.appendChild(line);
+                }
+            });
+        }
+        for (let i = 0; i < route.length - 1; i++) {
+            const n1 = nodes[route[i]], n2 = nodes[route[i+1]];
+            if (n1 && n2 && n1.floor === currentFloorId && n2.floor === currentFloorId) {
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", n1.x); line.setAttribute("y1", n1.y);
+                line.setAttribute("x2", n2.x); line.setAttribute("y2", n2.y);
+                line.setAttribute("stroke", "#f97316"); line.setAttribute("stroke-width", "3");
+                line.setAttribute("stroke-linecap", "round"); line.setAttribute("class", "route-line");
+                svgLayer.appendChild(line);
+            }
+        }
+    }
+
+    function handleNodeClick(id) {
+        const node = nodes[id]; if(!node) return;
+        if (isAdmin) {
+            if (mode === 'select') { selectedId = id; propsPanel.classList.remove('hidden'); updatePropsUI(); } 
+            else if (mode === 'connect') {
+                if (selectedId && selectedId !== id) { toggleEdge(selectedId, id); selectedId = id; } 
+                else selectedId = id;
+            }
+            renderNodes();
+        } else {
+            if (node.type === 'location' || node.type === 'stairs' || node.type === 'elevator') {
+                if (!selectStart.value) {
+                    selectStart.value = id; showMsg("Điểm đi: " + (node.label || id));
+                } else if (!selectEnd.value && selectStart.value !== id) {
+                    selectEnd.value = id; showMsg("Điểm đến: " + (node.label || id));
+                    document.getElementById('btn-find-path').click(); 
+                } else {
+                    selectStart.value = id; selectEnd.value = ""; route = [];
+                    showMsg("Đã đổi Điểm đi: " + (node.label || id));
+                }
+                renderNodes();
+            }
+        }
+    }
+
+    function toggleEdge(id1, id2) {
+        if(!nodes[id1] || !nodes[id2]) return;
+        const idx = edges.findIndex(e => (e[0]===id1 && e[1]===id2) || (e[0]===id2 && e[1]===id1));
+        if(idx !== -1) edges.splice(idx, 1); else edges.push([id1, id2]);
+        renderEdges();
+    }
+
+    function checkNextFloorPrompt() {
+        const p = document.getElementById('next-floor-prompt');
+        if (route.length === 0) { p.classList.add('hidden'); return; }
+        let nF = null;
+        const cI = route.findIndex(id => nodes[id] && nodes[id].floor === currentFloorId);
+        if (cI !== -1) {
+            for (let i = cI; i < route.length; i++) {
+                if (nodes[route[i]] && nodes[route[i]].floor !== currentFloorId) { nF = nodes[route[i]].floor; break; }
+            }
+        }
+        if (nF) {
+            p.classList.remove('hidden');
+            document.getElementById('prompt-text').innerText = `TIẾP THEO: ${floors.find(f => f.id === nF).name} (${floors.find(f => f.id === nF).area})`;
+            document.getElementById('btn-switch-floor').onclick = () => window.changeFloor(nF);
+        } else p.classList.add('hidden');
+    }
+
+    function updatePropsUI() {
+        const node = nodes[selectedId]; if(!node) return;
+        document.getElementById('node-label-input').value = node.label || "";
+        document.querySelectorAll('.type-opt').forEach(btn => {
+            const t = btn.id.replace('btn-type-', '');
+            btn.className = `type-opt p-2 border rounded-lg text-[9px] font-black transition-all ${node.type === t ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white text-slate-400 border-slate-200'}`;
+        });
+        ['small', 'medium', 'large'].forEach(s => {
+            const btn = document.getElementById(`btn-size-${s}`);
+            btn.className = `size-opt p-1.5 border rounded-lg text-[8px] font-bold transition-all ${node.size === s ? 'bg-orange-500 text-white border-orange-600' : 'bg-white text-slate-400 border-slate-200'}`;
+        });
+    }
+
+    function setupEventListeners() {
+        viewport.onwheel = (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            const nS = Math.min(Math.max(view.scale * delta, 0.1), 5);
+            const mX = (e.clientX - view.x) / view.scale, mY = (e.clientY - view.y) / view.scale;
+            view.x = e.clientX - mX * nS; view.y = e.clientY - mY * nS; view.scale = nS; applyTransform();
+        };
+
+        const handleStart = (cX, cY) => {
+            isPanning = true;
+            lastMousePos = { x: cX, y: cY };
+        };
+
+        const handleMove = (cX, cY) => {
+            if (!isPanning) return;
+            view.x += (cX - lastMousePos.x);
+            view.y += (cY - lastMousePos.y);
+            lastMousePos = { x: cX, y: cY };
+            applyTransform();
+        };
+
+        const handleEnd = () => {
+            isPanning = false;
+            lastTouchDist = 0;
+        };
+
+        viewport.onmousedown = (e) => { 
+            if(e.target.closest('.node-ui') || e.target.closest('aside') || e.target.closest('.floating-ctrl')) return; 
+            handleStart(e.clientX, e.clientY); 
+        };
+        window.onmousemove = (e) => { handleMove(e.clientX, e.clientY); };
+        window.onmouseup = handleEnd;
+
+        viewport.addEventListener('touchstart', (e) => {
+            if(e.target.closest('.node-ui') || e.target.closest('aside') || e.target.closest('.floating-ctrl')) return;
+            if (e.touches.length === 1) {
+                handleStart(e.touches[0].clientX, e.touches[0].clientY);
+            } else if (e.touches.length === 2) {
+                lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchmove', (e) => {
+            e.preventDefault(); 
+            if (e.touches.length === 1) {
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            } else if (e.touches.length === 2 && lastTouchDist > 0) {
+                const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                const delta = dist / lastTouchDist;
+                const nS = Math.min(Math.max(view.scale * delta, 0.1), 5);
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                const mX = (midX - view.x) / view.scale, mY = (midY - view.y) / view.scale;
+                view.x = midX - mX * nS; view.y = midY - mY * nS; view.scale = nS;
+                lastTouchDist = dist;
+                applyTransform();
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchend', handleEnd);
+
+        const toggleBtn = document.getElementById('toggle-sidebar-btn');
+        toggleBtn.onclick = () => { sidebar.classList.toggle('sidebar-hidden'); };
+        document.getElementById('close-sidebar-mobile').onclick = () => sidebar.classList.add('sidebar-hidden');
+
+        document.getElementById('secret-login-trigger').onclick = () => {
+            loginClickCount++;
+            if (loginClickCount >= 5) { loginModal.classList.remove('hidden'); loginClickCount = 0; }
+        };
+
+        document.getElementById('btn-rotate').onclick = () => {
+            view.rotation = (view.rotation + 90) % 360;
+            applyTransform();
+            renderNodes(); 
+            if(isAdmin) saveData(true);
+        };
+        document.getElementById('btn-recenter').onclick = () => { setupInitialView(); };
+
+        document.getElementById('btn-login-confirm').onclick = () => {
+            if(document.getElementById('admin-password').value === 'Nsg@2026') {
+                isAdmin = true; loginModal.classList.add('hidden');
+                document.getElementById('admin-tools').classList.remove('hidden');
+                updateUI();
+            } else alert("Mật khẩu sai!");
+        };
+        document.getElementById('btn-login-cancel').onclick = () => loginModal.classList.add('hidden');
+        document.getElementById('btn-logout').onclick = () => { isAdmin = false; location.reload(); };
+
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('bg-indigo-600', 'text-white'));
+                btn.classList.add('bg-indigo-600', 'text-white');
+                mode = btn.dataset.mode; selectedId = null; propsPanel.classList.add('hidden'); renderNodes();
+            };
+        });
+
+        document.getElementById('btn-save-all').onclick = () => { sanitizeConnections(); saveData(); };
+        document.getElementById('btn-find-path').onclick = () => {
+            const s = selectStart.value, e = selectEnd.value;
+            if(!s || !e) return;
+            activeStart = s; activeEnd = e;
+            saveData(true); calculateRouteLocally(s, e);
+            if (route.length === 0) { showMsg("Không tìm thấy đường nối!", false); } else {
+                document.getElementById('btn-clear-path').classList.remove('hidden');
+                currentFloorId = nodes[s].floor; updateUI();
+            }
+        };
+        document.getElementById('btn-clear-path').onclick = () => { 
+            route = []; activeStart = null; activeEnd = null; 
+            selectStart.value = ""; selectEnd.value = ""; 
+            document.getElementById('btn-clear-path').classList.add('hidden'); saveData(true); updateUI(); 
+        };
+        document.getElementById('btn-close-props').onclick = () => { selectedId = null; propsPanel.classList.add('hidden'); renderNodes(); };
+        document.getElementById('node-label-input').oninput = (e) => { if(selectedId) { nodes[selectedId].label = e.target.value; renderNodes(); updateSelectOptions(); saveData(true); } };
+        ['location', 'waypoint', 'stairs', 'elevator'].forEach(t => {
+            document.getElementById(`btn-type-${t}`).onclick = () => { if(selectedId) { nodes[selectedId].type = t; updatePropsUI(); renderNodes(); updateSelectOptions(); saveData(true); } };
+        });
+        ['small', 'medium', 'large'].forEach(s => {
+            document.getElementById(`btn-size-${s}`).onclick = () => { if(selectedId) { nodes[selectedId].size = s; updatePropsUI(); renderNodes(); saveData(true); } };
+        });
+        document.getElementById('btn-delete-node').onclick = () => {
+            if(selectedId) { edges = edges.filter(e => e[0] !== selectedId && e[1] !== selectedId); delete nodes[selectedId]; selectedId = null; propsPanel.classList.add('hidden'); updateUI(); saveData(true); }
+        };
+        mapContainer.onclick = (e) => {
+            if(isAdmin && mode === 'add' && !e.target.closest('.node-ui')) {
+                const rect = mapContainer.getBoundingClientRect();
+                const id = `n${Date.now()}_${Math.floor(Math.random()*1000)}`;
+                nodes[id] = { id, x: (e.clientX - rect.left) / view.scale, y: (e.clientY - rect.top) / view.scale, label: "ĐIỂM MỚI", type: "waypoint", size: "medium", floor: currentFloorId, connections: [] };
+                saveData(true); updateUI();
+            }
+        };
+    }
+
+    window.onload = () => {
+        initCloudSync(); setupInitialView(); setupEventListeners();
+        mapImage.onload = () => setupInitialView();
+    };
+</script>
+</body>
+</html>
