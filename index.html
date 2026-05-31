@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <title>Indoor Nav PRO - Advanced Smart Navigation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -22,8 +22,10 @@
         html, body {
             overflow: hidden;
             width: 100%; height: 100%;
+            height: 100dvh;
             margin: 0; padding: 0;
             touch-action: none;
+            background-color: #f1f5f9;
         }
 
         #viewport {
@@ -59,7 +61,7 @@
             position: relative; transform-origin: center center;
             will-change: transform;
             flex-shrink: 0;
-            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         .map-label {
@@ -92,7 +94,7 @@
 
 <div id="msg-box" class="hidden px-6 py-3 rounded-full text-xs font-bold shadow-2xl fixed top-6 left-1/2 -translate-x-1/2 z-[1000] text-white transition-all"></div>
 
-<div class="flex h-screen w-screen relative overflow-hidden bg-slate-200" id="app-root">
+<div class="flex h-full h-[100dvh] w-screen relative overflow-hidden bg-slate-200" id="app-root">
     
     <!-- Lớp phủ mờ nền khi mở sidebar trên các thiết bị màn hình nhỏ -->
     <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[190] transition-opacity duration-300"></div>
@@ -478,8 +480,6 @@
                             const data = doc.data();
                             
                             // CHỐNG GHI ĐÈ KHI ĐANG SỬA ĐỔI NODE:
-                            // Nếu đang trong chế độ Admin và đang chỉnh sửa một điểm,
-                            // giữ lại trạng thái chỉnh sửa của node đang được chọn để không bị snapshot Firestore đè lại làm mất ký tự gõ.
                             if (isAdmin && selectedId && nodes[selectedId]) {
                                 const serverNodes = data.nodes || {};
                                 const activeNodeBackup = { ...nodes[selectedId] };
@@ -607,7 +607,7 @@
             }
             return seq;
         } else {
-            // Trường hợp liên khu vực (VD: Từ lầu 1 Khu A sang lầu 3 Khu B -> Đi xuống trệt A, sang trệt B, đi lên lầu 3 B)
+            // Trường hợp liên khu vực
             const toGround = areaOrders[startArea] ? areaOrders[startArea][0] : startFloor;
             const fromGround = areaOrders[endArea] ? areaOrders[endArea][0] : endFloor;
             
@@ -624,7 +624,7 @@
         }
     }
 
-    // TÌM CẦU THANG/THANG MÁY KẾT NỐI TỐI ƯU NHẤT GIỮA HAI TẦNG KỀ NHAU (Dựa trên quãng đường và vị trí XY)
+    // TÌM CẦU THANG/THANG MÁY KẾT NỐI TỐI ƯU NHẤT GIỮA HAI TẦNG KỀ NHAU
     function findBestTransition(fromFloor, toFloor, fromNodeId, finalDestNodeId) {
         const startNode = nodes[fromNodeId];
         if (!startNode) return null;
@@ -638,7 +638,6 @@
             const matchingEnds = Object.values(nodes).filter(n => n.floor === toFloor && n.type === tStartNode.type);
             if (matchingEnds.length === 0) return;
             
-            // Đối khớp trục kỹ thuật đứng chính xác nhất bằng khoảng cách hình chiếu 2D XY
             let closestEndNode = null;
             let minDistance = Infinity;
             matchingEnds.forEach(tEndNode => {
@@ -653,7 +652,6 @@
             
             if (!closestEndNode) return;
             
-            // Tính điểm tối ưu: Tổng số bước đi tới thang hiện tại + Ước lượng khoảng cách từ thang đích đến phòng cuối cùng
             const path1 = findShortestPath(fromNodeId, tStartNode.id);
             if (path1) {
                 const destNode = nodes[finalDestNodeId];
@@ -678,8 +676,7 @@
         return null;
     }
 
-    // ĐỘNG CƠ CẬP NHẬT TUYẾN ĐƯỜNG ĐA TẦNG TUẦN TỰ (Sequential Route State Updater)
-    // TỐI ƯU: Nhóm các khu vực nằm cùng một mặt phẳng ngang (Trệt) để hiển thị lộ trình đi bộ ngang trước khi chuyển tầng.
+    // ĐỘNG CƠ CẬP NHẬT TUYẾN ĐƯỜNG ĐA TẦNG TUẦN TỰ
     function updateRouteAndUI() {
         if (!localStartId || !localEndId) {
             route = [];
@@ -694,7 +691,6 @@
         const E = nodes[localEndId];
         if (!S || !E) return;
 
-        // Khởi tạo tiến trình dẫn đường ảo tuần tự nếu mới bắt đầu hoặc đổi điểm đích
         if (!navigationActive || navigationTargetNodeId !== localEndId) {
             navigationActive = true;
             navigationCurrentNodeId = localStartId;
@@ -711,21 +707,18 @@
         route = [];
         crossFloorRouting = null;
 
-        // Đảm bảo màn hình hiển thị (map viewed floor) nhảy mượt mà về đúng tầng mà người dùng đang đứng ảo trong hành trình
         if (currentFloorId !== navFloor) {
             currentFloorId = navFloor;
             updateUI(); 
-            return; // Dừng lại để đợi map load xong ảnh của tầng mới rồi chạy lại
+            return; 
         }
 
         const currentMapImage = getFloorImage(navFloor);
         const targetMapImage = getFloorImage(E.floor);
 
         if (currentMapImage === targetMapImage) {
-            // Đã cùng mặt phẳng sơ đồ hiển thị (vd: cùng nằm trên sơ đồ trệt chung), vẽ đường đi trực tiếp ngang
             route = findShortestPath(navigationCurrentNodeId, localEndId) || [];
         } else {
-            // Khác mặt phẳng sơ đồ, cần tìm điểm thang gần nhất để chuyển tầng tiếp theo trong sequence
             let nextMapFloor = null;
             for (let i = currentFloorIdx + 1; i < floorSequence.length; i++) {
                 if (getFloorImage(floorSequence[i]) !== currentMapImage) {
@@ -735,7 +728,6 @@
             }
 
             if (nextMapFloor) {
-                // Liệt kê mọi tầng cùng dùng chung sơ đồ hiển thị này (vd: A-G, B-G, C-G, D-G)
                 const sameMapFloors = floors.filter(f => f.image === currentMapImage).map(f => f.id);
                 
                 let bestTransition = null;
@@ -773,7 +765,27 @@
         autoFocusRoute();
     }
 
+    function clamp(val, min, max) {
+        return Math.min(Math.max(val, min), max);
+    }
+
+    // TỐI ƯU MOBILE: Ngăn cản bản đồ trượt ra ngoài khung nhìn (Fly-away glitch)
+    function limitBounds() {
+        const marginX = MAP_WIDTH * view.scale * 0.6; // Cho phép trượt tối đa 60% bản đồ ra rìa màn hình
+        const marginY = MAP_HEIGHT * view.scale * 0.6;
+        const sidebarWidth = (window.innerWidth >= 1024 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
+        
+        const minX = sidebarWidth - marginX;
+        const maxX = viewport.clientWidth - (MAP_WIDTH * view.scale) + marginX;
+        const minY = -marginY;
+        const maxY = viewport.clientHeight - (MAP_HEIGHT * view.scale) + marginY;
+        
+        view.x = clamp(view.x, Math.min(minX, maxX), Math.max(minX, maxX));
+        view.y = clamp(view.y, Math.min(minY, maxY), Math.max(minY, maxY));
+    }
+
     function applyTransform() { 
+        limitBounds();
         mapContainer.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale}) rotate(${view.rotation}deg)`; 
     }
 
@@ -782,10 +794,10 @@
         const vW = viewport.clientWidth;
         const vH = viewport.clientHeight;
         const visibleWidth = vW - sidebarWidth;
-        const pad = 40;
+        const pad = 20; // Giảm bớt padding trên mobile để hiển thị tối đa sơ đồ
         const sX = (visibleWidth - pad) / MAP_WIDTH;
         const sY = (vH - pad) / MAP_HEIGHT;
-        view.scale = Math.min(sX, sY, 1);
+        view.scale = Math.min(sX, sY, 1.1);
         view.x = sidebarWidth + (visibleWidth - MAP_WIDTH * view.scale) / 2;
         view.y = (vH - MAP_HEIGHT * view.scale) / 2;
         applyTransform();
@@ -798,7 +810,6 @@
         const currentFloorObj = floors.find(x => x.id === currentFloorIdVal);
         const currentMapImage = currentFloorObj ? currentFloorObj.image : '';
 
-        // Tối ưu auto focus: Lấy tất cả nodes trên tuyến đường có chung hình ảnh sơ đồ đang hiển thị
         const currentFloorNodes = route.map(id => nodes[id]).filter(n => {
             if (!n) return false;
             const fObj = floors.find(x => x.id === n.floor);
@@ -823,8 +834,8 @@
 
         const routeW = Math.max(maxX - minX, 100);
         const routeH = Math.max(maxY - minY, 100);
-        const scaleX = (visibleWidth - 80) / routeW;
-        const scaleY = (vH - 240) / routeH; 
+        const scaleX = (visibleWidth - 60) / routeW;
+        const scaleY = (vH - 180) / routeH; 
         
         view.scale = Math.min(scaleX, scaleY, 2.2);
         view.x = sidebarWidth + (visibleWidth / 2) - midX * view.scale;
@@ -950,7 +961,6 @@
         }
     }
 
-    // TỐI ƯU HÓA: Cố định vị trí hiển thị ở tầng xuất phát khi gán điểm đến bằng ô nhập sidebar gợi ý (Không tự động nhảy tầng đích đột ngột)
     function showLocationSuggestions(filterText, suggestionsContainer, inputRole) {
         const value = normalizeTypo(filterText);
         
@@ -995,11 +1005,9 @@
                     if (inputRole === 'start') {
                         localStartId = n.id;
                         localStorage.setItem('ind_local_start_id', n.id);
-                        navigationActive = false; // Reset lại định tuyến mới
+                        navigationActive = false;
                         
                         showMsg("Đã đặt vị trí hiện tại: " + n.label.toUpperCase());
-                        
-                        // Chuyển tầng sơ đồ hiển thị khớp với điểm xuất phát
                         currentFloorId = n.floor;
                         
                         if (localEndId && localEndId !== n.id) {
@@ -1014,7 +1022,7 @@
                         }
                     } else if (inputRole === 'end') {
                         localEndId = n.id;
-                        navigationActive = false; // Reset định tuyến mới
+                        navigationActive = false;
                         
                         if (!localStartId) {
                             localStartId = "n_cong";
@@ -1022,8 +1030,6 @@
                         }
 
                         showMsg("Đang vẽ tuyến đường đến: " + n.label.toUpperCase());
-                        
-                        // Gọi updateRouteAndUI() để định tuyến từ điểm đầu tiên, tự động căn về tầng hiện tại của startId
                         updateRouteAndUI();
                         showRouteSummaryUI(localEndId);
                     }
@@ -1038,7 +1044,7 @@
         }
     }
 
-    // 1. Ô tìm kiếm chính bên ngoài
+    // Ô tìm kiếm ngoài
     searchInput.oninput = (e) => {
         const rawValue = e.target.value;
         const value = normalizeTypo(rawValue);
@@ -1070,7 +1076,6 @@
         }
     };
 
-    // 2. Ô nhập Xuất Phát trong Sidebar
     sidebarStartInput.oninput = (e) => {
         const rawValue = e.target.value;
         const value = normalizeTypo(rawValue);
@@ -1099,7 +1104,6 @@
         }
     };
 
-    // 3. Ô nhập Đích Đến trong Sidebar
     sidebarEndInput.oninput = (e) => {
         const rawValue = e.target.value;
         const value = normalizeTypo(rawValue);
@@ -1127,7 +1131,6 @@
         }
     };
 
-    // Đóng danh sách gợi ý khi click ra ngoài
     document.addEventListener('click', (e) => {
         if (e.target !== searchInput && !e.target.closest('#search-suggestions')) {
             suggestionsBox.classList.add('hidden');
@@ -1140,7 +1143,6 @@
         }
     });
 
-    // TỐI ƯU HÓA: Hiển thị đồng thời các điểm thuộc các khu vực khác nhau nhưng có chung một tệp ảnh sơ đồ nền
     function renderNodes() {
         nodesLayer.innerHTML = '';
         const isRouteActive = route.length > 0;
@@ -1160,10 +1162,7 @@
             const isNavEnd = localEndId === node.id;
             const isPartOfRoute = route.includes(node.id);
 
-            // Xác định xem node hiện tại có phải là vị trí ảo của người dùng hay không
             const isUserCurrentVirtualLoc = navigationActive && navigationCurrentNodeId === node.id;
-
-            // Xác định xem đây có phải là điểm cầu thang chuyển tiếp hiện tại của hành trình
             const isTransitionStart = crossFloorRouting && node.id === crossFloorRouting.transitionStartId;
 
             if (!isAdmin && node.type === 'waypoint') return;
@@ -1217,22 +1216,23 @@
 
             if (isUserCurrentVirtualLoc || isNavStart) color = 'bg-emerald-500 ring-4 ring-emerald-100';
             if (isNavEnd) color = 'bg-orange-500 ring-4 ring-orange-100 animate-bounce';
-            if (isTransitionStart) color = 'bg-indigo-600 ring-4 ring-indigo-200 animate-pulse'; // Phát sáng sóng chuyển tiếp
+            if (isTransitionStart) color = 'bg-indigo-600 ring-4 ring-indigo-200 animate-pulse';
 
-            let size = (isUserCurrentVirtualLoc || isNavStart) || isNavEnd || isTransitionStart ? 22 : (isPartOfRoute && (node.type === 'stairs' || node.type === 'elevator') ? 20 : (scale >= 1.6 ? 14 : 10));
+            // MỞ RỘNG VÙNG CHẠM (Size 26) trên di động để tăng độ chuẩn xác
+            let size = (isUserCurrentVirtualLoc || isNavStart) || isNavEnd || isTransitionStart ? 26 : (isPartOfRoute && (node.type === 'stairs' || node.type === 'elevator') ? 22 : (scale >= 1.6 ? 16 : 12));
             
             let displayIcon = node.customIcon || "📍";
             if (isUserCurrentVirtualLoc || isNavStart) displayIcon = "🚶";
             if (isNavEnd) displayIcon = "🎯";
-            if (isTransitionStart) displayIcon = "🪜"; // Cầu thang nhấp nháy chuyển tiếp
+            if (isTransitionStart) displayIcon = "🪜";
 
             const useMiniDot = !(isUserCurrentVirtualLoc || isNavStart) && !isNavEnd && !isPartOfRoute && scale < 1.3;
 
             div.innerHTML = useMiniDot ? `
-                <div class="rounded-full border border-white ${color} shadow-md hover:scale-125 transition-transform" style="width: 8px; height: 8px;"></div>
-                ${showLabel && node.label ? `<div class="map-label mt-0.5">${node.label.toUpperCase()}</div>` : ''}
+                <div class="rounded-full border border-white ${color} shadow-md hover:scale-125 transition-transform" style="width: 10px; height: 10px;"></div>
+                ${showLabel && node.label ? `<div class="map-label mt-1">${node.label.toUpperCase()}</div>` : ''}
             ` : `
-                <div class="rounded-full border-2 border-white ${color} flex items-center justify-center shadow-lg text-white font-bold hover:scale-110 transition-transform" style="width: ${size}px; height: ${size}px; font-size: ${size * 0.5}px;">
+                <div class="rounded-full border-2 border-white ${color} flex items-center justify-center shadow-lg text-white font-bold hover:scale-110 transition-transform" style="width: ${size}px; height: ${size}px; font-size: ${size * 0.55}px;">
                     ${displayIcon}
                 </div>
                 ${showLabel && node.label ? `
@@ -1281,7 +1281,6 @@
         });
     }
 
-    // TỐI ƯU HÓA: Vẽ đường nét đứt dẫn hướng đi bộ liên tục trên cùng mặt bằng ngang
     function renderEdges() {
         svgLayer.innerHTML = '';
         const currentFloorObj = floors.find(x => x.id === currentFloorId);
@@ -1324,12 +1323,9 @@
             }
             renderNodes();
         } else {
-            // Chuyển tầng mượt mà khi nhấp trực tiếp vào cầu thang dẫn đường trên bản đồ
             if (crossFloorRouting && (id === crossFloorRouting.transitionStartId || id === crossFloorRouting.transitionEndId)) {
                 const targetFloorId = crossFloorRouting.endFloor;
                 window.changeFloor(targetFloorId);
-                
-                // Cập nhật vị trí ảo lên tầng tiếp theo
                 navigationCurrentNodeId = crossFloorRouting.transitionEndId;
                 showMsg(`Đã lên ${floors.find(f => f.id === targetFloorId).name.toUpperCase()} - Tiếp tục di chuyển!`);
                 updateRouteAndUI();
@@ -1378,15 +1374,12 @@
         quickActionsBar.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
         document.getElementById('route-summary-dest').innerText = destNode.label.toUpperCase();
         
-        // Tính tổng số bước ước tính toàn bộ chặng di chuyển đa tầng
         let totalNodesCount = route.length;
         if (navigationActive && floorSequence.length > 1) {
-            // Đếm sơ bộ số lượng nút của toàn lộ trình liên tầng tuần tự
             totalNodesCount = floorSequence.length * 8; 
         }
         const steps = Math.round(totalNodesCount * 12);
         
-        // Hiển thị thông tin chặng di chuyển hiện tại cho sinh động
         let stepProgressText = "";
         if (navigationActive && floorSequence.length > 1) {
             const currentNavNode = nodes[navigationCurrentNodeId];
@@ -1404,8 +1397,6 @@
             fastSwitchBtn.innerText = `BẤM LÊN ${targetFloor.name.toUpperCase()} (${targetFloor.area.toUpperCase()})`;
             fastSwitchBtn.onclick = () => {
                 window.changeFloor(crossFloorRouting.endFloor);
-                
-                // Cập nhật vị trí ảo lên tầng tiếp theo
                 navigationCurrentNodeId = crossFloorRouting.transitionEndId;
                 showMsg(`Đã di chuyển lên ${targetFloor.name.toUpperCase()}`);
                 updateRouteAndUI();
@@ -1429,8 +1420,6 @@
             document.getElementById('prompt-text').innerText = `TIẾP THEO: LÊN ${targetFloor.name.toUpperCase()} QUA [${stairsName}]`;
             document.getElementById('btn-switch-floor').onclick = () => {
                 window.changeFloor(crossFloorRouting.endFloor);
-                
-                // Cập nhật vị trí ảo lên tầng tiếp theo
                 navigationCurrentNodeId = crossFloorRouting.transitionEndId;
                 showMsg(`Đã di chuyển lên ${targetFloor.name.toUpperCase()}`);
                 updateRouteAndUI();
@@ -1465,12 +1454,31 @@
     window.onmousemove = (e) => { handleMove(e.clientX, e.clientY); };
     window.onmouseup = handleEnd;
 
+    // TỐI ƯU CẢM ỨNG MOBILE: Chạm đúp phóng to cục bộ thay vì hoàn tác
     let lastTap = 0;
     viewport.addEventListener('touchend', (e) => {
         let currentTime = new Date().getTime();
         let tapLength = currentTime - lastTap;
-        if (tapLength < 300 && tapLength > 0) {
-            setupInitialView();
+        if (tapLength < 250 && tapLength > 0) {
+            if (view.scale > 1.3) {
+                setupInitialView();
+            } else {
+                const rect = viewport.getBoundingClientRect();
+                const touch = e.changedTouches[0];
+                const tX = touch.clientX - rect.left;
+                const tY = touch.clientY - rect.top;
+                
+                // Phóng to 2x cục bộ tại tâm điểm ngón tay vừa chạm đúp
+                const nS = 2.0;
+                const mX = (tX - view.x) / view.scale;
+                const mY = (tY - view.y) / view.scale;
+                
+                view.scale = nS;
+                view.x = tX - mX * nS;
+                view.y = tY - mY * nS;
+                applyTransform();
+                renderNodes();
+            }
             e.preventDefault();
         }
         lastTap = currentTime;
@@ -1639,7 +1647,6 @@
 
     document.getElementById('btn-close-props').onclick = () => { selectedId = null; propsPanel.classList.add('hidden'); renderNodes(); };
     
-    // TỐI ƯU SỰ KIỆN: Chỉ kích hoạt lưu (saveData) khi thay đổi hoàn tất để tránh nghẽn luồng tiêu điểm
     document.getElementById('node-label-input').oninput = (e) => {
         if(selectedId) { 
             nodes[selectedId].label = e.target.value.toUpperCase(); 
