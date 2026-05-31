@@ -128,7 +128,7 @@
         <div class="p-5 border-b border-slate-100 bg-gradient-to-br from-indigo-700 to-violet-900 text-white flex justify-between items-center">
             <div>
                 <h1 class="font-bold text-base leading-tight">Indoor Nav PRO</h1>
-                <p class="text-[9px] opacity-70 uppercase tracking-widest text-orange-300 font-bold">Advanced Smart Core v8.11</p>
+                <p class="text-[9px] opacity-70 uppercase tracking-widest text-orange-300 font-bold">Advanced Smart Core v8.12</p>
             </div>
             <button id="close-sidebar-btn" class="p-1.5 text-white/60 hover:text-white rounded-lg hover:bg-white/10 lg:hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -197,7 +197,7 @@
                 <span id="sync-status" class="w-2 h-2 rounded-full bg-yellow-500"></span>
                 <span id="sync-text" class="font-bold uppercase text-[8px]">Connecting</span>
             </div>
-            <span id="secret-login-trigger" class="font-bold uppercase text-[8px] cursor-pointer">v8.11 CLOUD</span>
+            <span id="secret-login-trigger" class="font-bold uppercase text-[8px] cursor-pointer">v8.12 CLOUD</span>
         </div>
     </aside>
 
@@ -362,6 +362,15 @@
 
     // Biến lưu giữ chiều rộng trước đó để chặn sự kiện URL bar resize trên Mobile
     let lastWidth = window.innerWidth;
+
+    // CÁC BIẾN HỖ TRỢ ĐỊNH VỊ THU PHÓNG ĐA ĐIỂM HOÀN HẢO (Butter-Smooth Pinch-to-Zoom)
+    let initScale = 1;
+    let initViewX = 0;
+    let initViewY = 0;
+    let initTouchDist = 0;
+    let initMapX = 0;
+    let initMapY = 0;
+    let isPinching = false;
 
     const floors = [
         { id: 'A-G', area: 'Khu A', name: 'Tầng Trệt', image: 'img/map.png' },
@@ -783,7 +792,7 @@
         return Math.min(Math.max(val, min), max);
     }
 
-    // TỐI ƯU CỰC MẠNH MOBILE: Mở rộng biên kéo tối đa, chống bị lock cứng, giúp vuốt kéo xem được toàn phần bản đồ dễ dàng như trên PC
+    // TỐI ƯU CỰC MẠNH MOBILE: Mở rộng biên kéo tối đa theo khung xoay thực tế, chống bị lock cứng khi xoay bản đồ, giúp vuốt kéo xem được toàn phần bản đồ dễ dàng ở mọi góc xoay
     function limitBounds() {
         const vW = viewport.clientWidth || window.innerWidth;
         const vH = viewport.clientHeight || window.innerHeight;
@@ -802,17 +811,39 @@
             view.scale = 5.0;
         }
 
-        const mapW = MAP_WIDTH * view.scale;
-        const mapH = MAP_HEIGHT * view.scale;
+        // Tính toán bốn góc của bản đồ sau khi xoay để tìm khung bao (bounding box) thực tế của sơ đồ
+        const rad = view.rotation * Math.PI / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
 
-        // BIÊN TỰ DO THÔNG THOÁNG: Người dùng thoải mái vuốt ngang dọc để duyệt bản đồ, chỉ cần giữ lại ít nhất 100px của sơ đồ trên màn hình hiển thị
-        const minX = sidebarWidth - mapW + 100;
-        const maxX = vW - 100;
-        const minY = -mapH + 100;
-        const maxY = vH - 100;
+        const corners = [
+            { x: 0, y: 0 },
+            { x: MAP_WIDTH, y: 0 },
+            { x: MAP_WIDTH, y: MAP_HEIGHT },
+            { x: 0, y: MAP_HEIGHT }
+        ];
 
-        view.x = clamp(view.x, minX, maxX);
-        view.y = clamp(view.y, minY, maxY);
+        let minRx = Infinity, maxRx = -Infinity;
+        let minRy = Infinity, maxRy = -Infinity;
+
+        corners.forEach(c => {
+            const rx = (c.x * cos - c.y * sin) * view.scale;
+            const ry = (c.x * sin + c.y * cos) * view.scale;
+            if (rx < minRx) minRx = rx;
+            if (rx > maxRx) maxRx = rx;
+            if (ry < minRy) minRy = ry;
+            if (ry > maxRy) maxRy = ry;
+        });
+
+        // BIÊN TỰ DO THÔNG THOÁNG CHỐNG TRÔI KHI XOAY:
+        // Người dùng thoải mái vuốt ngang dọc để duyệt bản đồ sau khi xoay, chỉ cần giữ lại ít nhất 100px của sơ đồ trên màn hình hiển thị
+        const minX = sidebarWidth - maxRx + 100;
+        const maxX = vW - minRx - 100;
+        const minY = -maxRy + 100;
+        const maxY = vH - minRy - 100;
+
+        view.x = clamp(view.x, Math.min(minX, maxX), Math.max(minX, maxX));
+        view.y = clamp(view.y, Math.min(minY, maxY), Math.max(minY, maxY));
     }
 
     // NÂNG CẤP TRANSITION: Chỉ dùng hiệu ứng mượt khi auto-center, tắt khi vuốt tay để phản hồi vuốt mượt lập tức không bị lag giật
@@ -826,6 +857,7 @@
         mapContainer.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale}) rotate(${view.rotation}deg)`; 
     }
 
+    // TỐI ƯU CĂN TÂM TUYỆT ĐỐI CHO SƠ ĐỒ XOAY: Định vị sơ đồ luôn ở chính giữa trung tâm màn hình dù ở bất kỳ góc xoay nào
     function setupInitialView() {
         const sidebarWidth = (window.innerWidth >= 1024 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
         const vW = viewport.clientWidth || window.innerWidth;
@@ -839,21 +871,55 @@
 
         const visibleWidth = vW - sidebarWidth;
         
+        // Tính toán kích thước bao của bản đồ dựa trên góc xoay hiện tại
+        const rad = view.rotation * Math.PI / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+
+        const corners = [
+            { x: 0, y: 0 },
+            { x: MAP_WIDTH, y: 0 },
+            { x: MAP_WIDTH, y: MAP_HEIGHT },
+            { x: 0, y: MAP_HEIGHT }
+        ];
+
+        let minRx = Infinity, maxRx = -Infinity;
+        let minRy = Infinity, maxRy = -Infinity;
+
+        corners.forEach(c => {
+            const rx = (c.x * cos - c.y * sin);
+            const ry = (c.x * sin + c.y * cos);
+            if (rx < minRx) minRx = rx;
+            if (rx > maxRx) maxRx = rx;
+            if (ry < minRy) minRy = ry;
+            if (ry > maxRy) maxRy = ry;
+        });
+
+        const rotatedWidth = maxRx - minRx;
+        const rotatedHeight = maxRy - minRy;
+
         // Mobile cực ít padding để tối ưu không gian màn hình nhỏ
         const pad = window.innerWidth < 768 ? 16 : 40;
-        const sX = (visibleWidth - pad) / MAP_WIDTH;
-        const sY = (vH - pad) / MAP_HEIGHT;
+        const sX = (visibleWidth - pad) / rotatedWidth;
+        const sY = (vH - pad) / rotatedHeight;
         
         view.scale = Math.min(sX, sY, 1.5);
         
-        // CĂN GIỮA TRUNG TÂM HOÀN HẢO THEO ĐÚNG TỶ LỆ VIEWPORT MÀN HÌNH
-        view.x = sidebarWidth + (visibleWidth - MAP_WIDTH * view.scale) / 2;
-        view.y = (vH - MAP_HEIGHT * view.scale) / 2;
+        // ĐỊNH TÂM TUYỆT ĐỐI: Căn khớp hoàn hảo tâm bao sơ đồ xoay với tâm màn hình hiển thị
+        const vcX = sidebarWidth + visibleWidth / 2;
+        const vcY = vH / 2;
+        
+        const mapCenterRx = (minRx + maxRx) / 2 * view.scale;
+        const mapCenterRy = (minRy + maxRy) / 2 * view.scale;
+
+        view.x = vcX - mapCenterRx;
+        view.y = vcY - mapCenterRy;
         
         applyTransform(true); // Animate mượt mà về tâm
         renderNodes();
     }
 
+    // TỐI ƯU CĂN TÂM TUYỆT ĐỐI KHI TỰ ĐỘNG FOCUS LỘ TRÌNH XOAY
     function autoFocusRoute() {
         if(route.length === 0) return;
         const currentFloorIdVal = currentFloorId;
@@ -889,8 +955,20 @@
         const scaleY = (vH - 240) / routeH; 
         
         view.scale = Math.min(scaleX, scaleY, 2.2);
-        view.x = sidebarWidth + (visibleWidth / 2) - midX * view.scale;
-        view.y = (vH / 2) - midY * view.scale;
+
+        // Định tâm trung điểm chặng đường đã xoay với tâm màn hình hiển thị
+        const rad = view.rotation * Math.PI / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+
+        const rx = (midX * cos - midY * sin) * view.scale;
+        const ry = (midX * sin + midY * cos) * view.scale;
+
+        const vcX = sidebarWidth + visibleWidth / 2;
+        const vcY = vH / 2;
+
+        view.x = vcX - rx;
+        view.y = vcY - ry;
         
         applyTransform(true);
         renderNodes();
@@ -1510,7 +1588,14 @@
         view.x += (cX - lastMousePos.x); view.y += (cY - lastMousePos.y);
         lastMousePos = { x: cX, y: cY }; applyTransform();
     };
-    const handleEnd = () => { isPanning = false; lastTouchDist = 0; };
+    
+    // TỐI ƯU HỆ THỐNG GESTURE END: Đảm bảo bo biên mượt mà và dọn dẹp các trạng thái cử chỉ khi nhả ngón tay
+    const handleEnd = () => { 
+        isPanning = false; 
+        isPinching = false;
+        initTouchDist = 0;
+        applyTransform(true); // Thực hiện bo biên nhẹ nhàng, khôi phục cân đối tầm nhìn
+    };
 
     viewport.onwheel = (e) => {
         e.preventDefault();
@@ -1562,32 +1647,110 @@
 
     viewport.addEventListener('touchstart', (e) => {
         if(e.target.closest('.node-ui') || e.target.closest('aside') || e.target.closest('div.absolute') || e.target.closest('div.fixed')) return;
-        if (e.touches.length === 1) handleStart(e.touches[0].clientX, e.touches[0].clientY);
-        else if (e.touches.length === 2) lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        if (e.touches.length === 1) {
+            isPanning = true;
+            isPinching = false;
+            lastMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.touches.length === 2) {
+            // KHỞI TẠO NEO CỬ CHỈ 2 NGÓN: Lưu trữ trạng thái gốc để tính toán độc lập
+            isPanning = false;
+            isPinching = true;
+            initTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            initScale = view.scale;
+            initViewX = view.x;
+            initViewY = view.y;
+
+            const initMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const initMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+            const R = view.rotation * Math.PI / 180;
+            const dx = (initMidX - initViewX) / initScale;
+            const dy = (initMidY - initViewY) / initScale;
+            initMapX = dx * Math.cos(R) + dy * Math.sin(R);
+            initMapY = -dx * Math.sin(R) + dy * Math.cos(R);
+        }
     }, { passive: false });
 
     viewport.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 1) handleMove(e.touches[0].clientX, e.touches[0].clientY);
-        else if (e.touches.length === 2 && lastTouchDist > 0) {
+        if (e.touches.length === 1 && isPanning) {
+            // Vuốt 1 ngón chuyển dời (Pan)
+            const touch = e.touches[0];
+            view.x += (touch.clientX - lastMousePos.x); 
+            view.y += (touch.clientY - lastMousePos.y);
+            lastMousePos = { x: touch.clientX, y: touch.clientY };
+            applyTransform(); 
+        } else if (e.touches.length === 2 && isPinching && initTouchDist > 0) {
+            // Thu phóng 2 ngón tuyệt đối (Smooth Pinch Zoom) - Ngăn hoàn toàn hiện tượng lệch giật
             e.preventDefault();
             const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            const delta = dist / lastTouchDist;
-            const nS = Math.min(Math.max(view.scale * delta, 0.1), 5);
+            const delta = dist / initTouchDist;
+            
+            const vW = viewport.clientWidth || window.innerWidth;
+            const vH = viewport.clientHeight || window.innerHeight;
+            const sidebarWidth = (window.innerWidth >= 1024 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
+            const visibleWidth = vW - sidebarWidth;
+
+            const minScaleX = (visibleWidth * 0.4) / MAP_WIDTH; 
+            const minScaleY = (vH * 0.4) / MAP_HEIGHT;
+            const minScale = Math.max(Math.min(minScaleX, minScaleY), 0.12);
+
+            let nS = initScale * delta;
+            if (nS < minScale) nS = minScale;
+            if (nS > 5.0) nS = 5.0;
+
             const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
             const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            
-            const mX = (midX - view.x) / view.scale;
-            const mY = (midY - view.y) / view.scale;
-            
-            view.scale = nS; 
-            view.x = midX - mX * nS;
-            view.y = midY - mY * nS;
-            lastTouchDist = dist; 
-            applyTransform(); // Vuốt zoom tức thời ko bị trễ phản hồi
+
+            const R = view.rotation * Math.PI / 180;
+            view.scale = nS;
+            view.x = midX - nS * (initMapX * Math.cos(R) - initMapY * Math.sin(R));
+            view.y = midY - nS * (initMapX * Math.sin(R) + initMapY * Math.cos(R));
+
+            applyTransform(); // Vuốt thu phóng tức thời cực mượt
             renderNodes();
         }
     }, { passive: false });
-    viewport.addEventListener('touchend', handleEnd);
+
+    viewport.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) {
+            handleEnd();
+        } else if (e.touches.length === 1) {
+            // Chuyển chế độ mượt mà từ zoom 2 ngón sang pan 1 ngón nếu nhấc bớt ngón tay
+            isPanning = true;
+            isPinching = false;
+            lastMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+    });
+    viewport.addEventListener('touchcancel', handleEnd);
+
+    // THUẬT TOÁN XOAY QUANH TÂM MÀN HÌNH CHUẨN XÁC TUYỆT ĐỐI (Perfect Centered Rotation Engine)
+    function rotateAroundViewportCenter(degrees) {
+        const vW = viewport.clientWidth || window.innerWidth;
+        const vH = viewport.clientHeight || window.innerHeight;
+        const sidebarWidth = (window.innerWidth >= 1024 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
+        const visibleWidth = vW - sidebarWidth;
+        const vcX = sidebarWidth + visibleWidth / 2;
+        const vcY = vH / 2;
+
+        // 1. Tìm toạ độ gốc trên bản đồ đang nằm tại vị trí tâm màn hình vcX, vcY
+        const R1 = view.rotation * Math.PI / 180;
+        const dx = (vcX - view.x) / view.scale;
+        const dy = (vcY - view.y) / view.scale;
+        const mapX = dx * Math.cos(R1) + dy * Math.sin(R1);
+        const mapY = -dx * Math.sin(R1) + dy * Math.cos(R1);
+
+        // 2. Cập nhật góc xoay mới
+        view.rotation = (view.rotation + degrees) % 360;
+        if (view.rotation < 0) view.rotation += 360;
+
+        // 3. Khôi phục toạ độ tịnh tiến view.x và view.y mới để điểm (mapX, mapY) tiếp tục nằm ở chính diện tâm màn hình
+        const R2 = view.rotation * Math.PI / 180;
+        view.x = vcX - view.scale * (mapX * Math.cos(R2) - mapY * Math.sin(R2));
+        view.y = vcY - view.scale * (mapX * Math.sin(R2) + mapY * Math.cos(R2));
+
+        applyTransform(true); // Thực hiện dịch chuyển mượt mà tại chỗ
+        renderNodes();
+    }
 
     document.querySelectorAll('.quick-action-btn').forEach(btn => {
         btn.onclick = () => {
@@ -1623,8 +1786,9 @@
     document.getElementById('quick-recenter-btn').onclick = () => setupInitialView();
     document.getElementById('btn-recenter').onclick = () => setupInitialView();
     
+    // GÁN SỰ KIỆN XOAY QUANH TÂM BẢN ĐỒ HOÀN HẢO
     document.getElementById('btn-rotate').onclick = () => {
-        view.rotation = (view.rotation + 90) % 360; applyTransform(true); renderNodes();
+        rotateAroundViewportCenter(90);
     };
 
     document.getElementById('qr-mock-btn').onclick = () => {
