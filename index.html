@@ -36,10 +36,6 @@
         }
         #viewport:active { cursor: grabbing; }
 
-        /* Dimming effects for non-active elements */
-        .dimmed-map { filter: saturate(0.3) opacity(0.4); transition: filter 0.4s ease, opacity 0.4s ease; }
-        .dark-mode .dimmed-map { filter: saturate(0.2) opacity(0.2) brightness(0.5); }
-
         .node-ui { 
             transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; 
             cursor: pointer; 
@@ -47,7 +43,6 @@
         }
         .dragging { opacity: 0.5 !important; z-index: 1000 !important; transition: none !important; }
 
-        /* Pulse effects for location icons */
         .current-loc-pulse {
             position: relative;
         }
@@ -67,7 +62,6 @@
             transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        /* Clean Map Typography - No bulky borders */
         .map-label {
             font-family: system-ui, -apple-system, sans-serif;
             font-weight: 800;
@@ -78,12 +72,7 @@
             transition: opacity 0.2s ease, transform 0.2s ease;
             white-space: nowrap;
         }
-        .dark-mode .map-label {
-            color: #f1f5f9;
-            text-shadow: -1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 1px 1px 0 #0f172a;
-        }
 
-        /* Standardized Room Categories Design */
         .cat-classroom { background-color: #22c55e !important; } /* Xanh lá */
         .cat-office { background-color: #a855f7 !important; }    /* Tím */
         .cat-service { background-color: #eab308 !important; }   /* Vàng */
@@ -94,146 +83,138 @@
             z-index: 200;
         }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .dark-mode ::-webkit-scrollbar-thumb { background: #475569; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-800 font-sans transition-colors duration-300">
+<body class="bg-slate-100 text-slate-800 font-sans antialiased selection:bg-indigo-500 selection:text-white">
 
 <div id="msg-box" class="hidden px-6 py-3 rounded-full text-xs font-bold shadow-2xl fixed top-6 left-1/2 -translate-x-1/2 z-[1000] text-white transition-all"></div>
 
-<div class="flex h-screen w-screen relative overflow-hidden bg-slate-200 dark:bg-slate-950" id="app-root">
+<div class="flex h-screen w-screen relative overflow-hidden bg-slate-200" id="app-root">
     
-    <!-- BACKDROP COVER FOR SIDEBAR (Mobile) -->
+    <!-- Lớp phủ mờ nền khi mở sidebar trên các thiết bị màn hình nhỏ -->
     <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[190] transition-opacity duration-300"></div>
 
-    <!-- FLOATING SEARCH BAR & HAMBURGER TRIGGER -->
-    <div class="absolute top-4 left-4 right-4 md:left-6 md:right-auto md:w-96 z-[140] flex flex-col gap-2 pointer-events-none">
-        <div class="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-xl rounded-2xl p-2.5 flex items-center gap-2 border border-slate-100 dark:border-slate-800 pointer-events-auto transition-all">
-            <button id="menu-trigger-btn" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    <!-- Hộp tìm kiếm chính gán vị trí hiện tại nổi trên bản đồ (Tối ưu dịch chuyển lg:left-[340px] trên PC để tránh đè Sidebar) -->
+    <div class="absolute top-4 left-4 right-4 lg:left-[340px] md:right-auto md:w-96 z-[140] flex flex-col gap-2 pointer-events-none">
+        <div class="w-full bg-white/95 backdrop-blur-md shadow-xl rounded-2xl p-3 flex items-center gap-2.5 border border-slate-100 pointer-events-auto transition-all">
+            <button id="menu-trigger-btn" class="p-2.5 hover:bg-slate-100 rounded-xl text-slate-600 transition-colors" title="Mở danh mục sơ đồ">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
             
             <div class="flex-1 relative">
-                <input id="smart-search-input" type="text" placeholder="Tìm phòng học, khoa, thư viện..." class="w-full pl-1 pr-6 py-1 bg-transparent outline-none text-xs font-bold text-slate-800 dark:text-slate-100 placeholder-slate-400">
+                <input id="smart-search-input" type="text" placeholder="Nhập vị trí hiện tại của bạn..." class="w-full pl-1 pr-6 py-1.5 bg-transparent outline-none text-xs md:text-sm font-bold text-slate-800 placeholder-slate-400">
                 <button id="clear-search-btn" class="hidden absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">✕</button>
             </div>
             
-            <div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+            <div class="w-px h-6 bg-slate-200"></div>
             
-            <!-- QR SCAN CHECK-IN TRIGGER -->
-            <button id="qr-mock-btn" class="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl transition-colors" title="Check-in vị trí ngẫu nhiên">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <button id="qr-mock-btn" class="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors" title="Mô phỏng quét mã QR định vị trí hiện tại">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
             </button>
         </div>
 
-        <!-- SEARCH AUTO SUGGESTIONS -->
-        <div id="search-suggestions" class="hidden w-full max-h-60 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl rounded-2xl border border-slate-100 dark:border-slate-800 overflow-y-auto pointer-events-auto"></div>
+        <div id="search-suggestions" class="hidden w-full max-h-64 bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl border border-slate-100 overflow-y-auto pointer-events-auto"></div>
     </div>
 
-    <!-- MAIN SIDEBAR PANEL (Collapsible by default) -->
-    <aside id="main-sidebar" class="sidebar-panel fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl -translate-x-full">
-        <div class="p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-br from-indigo-700 to-violet-900 text-white flex justify-between items-center">
+    <!-- SIDEBAR PANEL - Tối ưu hóa đa thiết bị mượt mà -->
+    <aside id="main-sidebar" class="sidebar-panel fixed inset-y-0 left-0 w-80 md:w-80 bg-white border-r border-slate-200 flex flex-col shadow-2xl -translate-x-full lg:translate-x-0 lg:static lg:z-10">
+        <div class="p-5 border-b border-slate-100 bg-gradient-to-br from-indigo-700 to-violet-900 text-white flex justify-between items-center">
             <div>
                 <h1 class="font-bold text-base leading-tight">Indoor Nav PRO</h1>
-                <p class="text-[9px] opacity-70 uppercase tracking-widest text-orange-300 font-bold">Advanced Smart Core v8.2</p>
+                <p class="text-[9px] opacity-70 uppercase tracking-widest text-orange-300 font-bold">Advanced Smart Core v8.8</p>
             </div>
-            <button id="close-sidebar-btn" class="p-1 text-white/60 hover:text-white rounded-lg hover:bg-white/10">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <button id="close-sidebar-btn" class="p-1.5 text-white/60 hover:text-white rounded-lg hover:bg-white/10 lg:hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
 
         <div class="flex-1 overflow-y-auto p-4 space-y-4">
-            <!-- CURRENT LOCATION SELECTOR (Autocomplete Input) -->
-            <div class="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1.5 relative">
-                <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">📍 Đang check-in tại</span>
-                <div class="relative">
-                    <input id="qr-location-input" type="text" placeholder="Nhập vị trí xuất phát..." class="w-full p-2 pr-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black outline-none text-slate-800 dark:text-slate-100">
-                    <button id="clear-qr-input-btn" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs">✕</button>
+            
+            <!-- BỘ CHỈ ĐƯỜNG ĐỒNG BỘ CHUNG MỘT CHỖ (Google Maps/Grab Style) -->
+            <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl relative shadow-sm space-y-3">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">🔍 Thiết lập lộ trình</span>
+                
+                <div class="relative flex flex-col gap-3 pl-6">
+                    <!-- Đường kẻ nét đứt nối hai vị trí -->
+                    <div class="absolute left-3.5 top-4 bottom-4 w-px border-l-2 border-dashed border-slate-300"></div>
+                    
+                    <!-- Nhập điểm xuất phát -->
+                    <div class="relative">
+                        <div class="absolute -left-[19px] top-3.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100"></div>
+                        <span class="text-[8px] font-black text-slate-400 block uppercase mb-1">Điểm xuất phát</span>
+                        <input id="sidebar-start-input" type="text" placeholder="Nhập điểm xuất phát..." class="w-full p-2.5 pr-6 bg-white border border-slate-200 rounded-xl text-xs font-black outline-none text-slate-800">
+                        <button id="clear-sidebar-start-btn" class="hidden absolute right-2 top-1/2 translate-y-[10%] text-slate-400 hover:text-slate-600 font-bold text-xs">✕</button>
+                        <div id="sidebar-start-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 max-h-48 bg-white/95 border border-slate-100 shadow-xl rounded-xl overflow-y-auto z-[250]"></div>
+                    </div>
+                    
+                    <!-- Nhập điểm muốn đến -->
+                    <div class="relative">
+                        <div class="absolute -left-[19px] top-3.5 w-2.5 h-2.5 rounded-full bg-orange-500 ring-4 ring-orange-100"></div>
+                        <span class="text-[8px] font-black text-slate-400 block uppercase mb-1">Điểm đến</span>
+                        <input id="sidebar-end-input" type="text" placeholder="Nhập điểm muốn đến..." class="w-full p-2.5 pr-6 bg-white border border-slate-200 rounded-xl text-xs font-black outline-none text-slate-800">
+                        <button id="clear-sidebar-end-btn" class="hidden absolute right-2 top-1/2 translate-y-[10%] text-slate-400 hover:text-slate-600 font-bold text-xs">✕</button>
+                        <div id="sidebar-end-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 max-h-48 bg-white/95 border border-slate-100 shadow-xl rounded-xl overflow-y-auto z-[250]"></div>
+                    </div>
                 </div>
-                <!-- Suggestions for start/check-in position -->
-                <div id="qr-location-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 max-h-48 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-slate-800 shadow-xl rounded-xl overflow-y-auto z-[250]"></div>
             </div>
 
-            <!-- ADMINISTRATIVE CONTROLS -->
-            <div id="admin-tools" class="hidden space-y-3 bg-indigo-50/40 dark:bg-indigo-950/20 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
-                <div class="flex items-center justify-between border-b border-indigo-100 dark:border-indigo-900/40 pb-2">
+            <div id="admin-tools" class="hidden space-y-3 bg-indigo-50/40 p-3 rounded-2xl border border-indigo-100">
+                <div class="flex items-center justify-between border-b border-indigo-100 pb-2">
                     <span class="text-[9px] font-bold text-indigo-500 uppercase">Quản trị Hệ thống</span>
                     <button id="btn-logout" class="text-red-500 text-xs font-bold">Thoát</button>
                 </div>
                 <div class="grid grid-cols-3 gap-2">
                     <button data-mode="select" class="tool-btn p-2 rounded-xl border border-transparent bg-indigo-600 text-white text-[9px] font-black uppercase">Kéo</button>
-                    <button data-mode="add" class="tool-btn p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-black uppercase">Thêm</button>
-                    <button data-mode="connect" class="tool-btn p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-black uppercase">Nối</button>
+                    <button data-mode="add" class="tool-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[9px] font-black uppercase">Thêm</button>
+                    <button data-mode="connect" class="tool-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[9px] font-black uppercase">Nối</button>
                 </div>
-                <button id="btn-save-all" class="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-lg hover:bg-indigo-700 transition-all">LƯU THAY ĐỔI</button>
+                <button id="btn-save-all" class="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-lg hover:bg-indigo-700 transition-all">LƯU THAY ĐỔI SƠ ĐỒ</button>
             </div>
 
-            <!-- SMART ROUTING PREFERENCES -->
             <div class="space-y-1.5">
-                <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tùy chọn di chuyển</span>
-                <div class="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-800/40 p-1 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <button id="pref-shortest" class="pref-btn py-1.5 text-[9px] font-black uppercase rounded-lg transition-all bg-white dark:bg-slate-800 text-indigo-600 shadow-sm" data-pref="shortest">Gần Nhất</button>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Tùy chọn di chuyển</span>
+                <div class="grid grid-cols-2 gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                    <button id="pref-shortest" class="pref-btn py-1.5 text-[9px] font-black uppercase rounded-lg transition-all bg-white text-indigo-600 shadow-sm" data-pref="shortest">Gần Nhất</button>
                     <button id="pref-elevator" class="pref-btn py-1.5 text-[9px] font-black uppercase rounded-lg transition-all text-slate-500" data-pref="elevator">Ưu tiên 🛗</button>
                 </div>
             </div>
 
-            <!-- ACCORDION MAP CATEGORIES / FLOORS -->
             <div class="space-y-1.5">
-                <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Danh mục sơ đồ</span>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Danh mục sơ đồ</span>
                 <div id="floor-accordion-container" class="space-y-1.5"></div>
-            </div>
-
-            <!-- MANUAL DIRECTION SELECTORS -->
-            <div class="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tìm đường thủ công</span>
-                <div class="space-y-2">
-                    <select id="select-start" class="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold outline-none"></select>
-                    <select id="select-end" class="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold outline-none"></select>
-                    <div class="flex gap-2">
-                        <button id="btn-find-path" class="flex-1 bg-orange-500 text-white py-2 rounded-xl text-xs font-bold shadow-lg transition-all">TÌM ĐƯỜNG</button>
-                        <button id="btn-clear-path" class="hidden p-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl border dark:border-slate-700">✕</button>
-                    </div>
-                </div>
             </div>
         </div>
         
-        <!-- SIDEBAR FOOTER -->
-        <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 text-[9px] text-slate-400 flex justify-between items-center">
+        <div class="p-4 bg-slate-50 border-t border-slate-100 text-[9px] text-slate-400 flex justify-between items-center">
             <div class="flex items-center gap-2">
                 <span id="sync-status" class="w-2 h-2 rounded-full bg-yellow-500"></span>
                 <span id="sync-text" class="font-bold uppercase text-[8px]">Connecting</span>
             </div>
-            <button id="toggle-dark-mode" class="px-2 py-1 bg-slate-200 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 font-bold text-[8px]">DARK MODE</button>
-            <span id="secret-login-trigger" class="font-bold uppercase text-[8px] cursor-pointer">v8.2 CLOUD</span>
+            <span id="secret-login-trigger" class="font-bold uppercase text-[8px] cursor-pointer">v8.8 CLOUD</span>
         </div>
     </aside>
 
-    <!-- VIEWPORT MAIN ENGINE -->
-    <main id="viewport" class="flex-1 bg-slate-100 dark:bg-slate-950">
-        <!-- FLOATING CONTROL SYSTEM -->
+    <main id="viewport" class="flex-1 bg-slate-100 relative">
         <div class="absolute right-4 top-4 z-[140] flex flex-col gap-2">
-            <button id="btn-rotate" class="p-2.5 bg-white/95 dark:bg-slate-900/95 shadow-lg rounded-xl border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300 active:scale-90 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+            <button id="btn-rotate" class="p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform" title="Xoay sơ đồ 90°">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
             </button>
-            <button id="btn-recenter" class="p-2.5 bg-white/95 dark:bg-slate-900/95 shadow-lg rounded-xl border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300 active:scale-90 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+            <button id="btn-recenter" class="p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform" title="Căn giữa sơ đồ">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
             </button>
         </div>
 
-        <!-- GRAPHIC ENGINE CONTAINER -->
-        <div id="map-container" class="bg-white dark:bg-slate-900 shadow-2xl rounded-xl overflow-visible">
+        <div id="map-container" class="bg-white shadow-2xl rounded-xl overflow-visible">
             <img id="map-image" src="" alt="Sơ đồ tòa nhà" class="w-full h-full object-fill rounded-xl pointer-events-none transition-all duration-300">
             <svg id="svg-layer" class="absolute inset-0 w-full h-full pointer-events-none overflow-visible"></svg>
             <div id="nodes-layer" class="absolute inset-0 pointer-events-none"></div>
         </div>
 
-        <!-- ROUTE SUMMARY BOTOM CARD -->
-        <div id="route-summary-card" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 w-11/12 max-w-sm bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100/50 dark:border-slate-800 shadow-2xl p-4 rounded-2xl z-[150] flex flex-col gap-2 transition-all duration-300">
-            <div class="flex items-center justify-between border-b dark:border-slate-800 pb-2">
+        <div id="route-summary-card" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 w-11/12 max-w-sm bg-white/95 backdrop-blur-md border border-slate-100/50 shadow-2xl p-4 rounded-2xl z-[150] flex flex-col gap-2 transition-all duration-300">
+            <div class="flex items-center justify-between border-b pb-2">
                 <div class="flex items-center gap-2">
                     <span class="flex h-2 w-2 relative">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
@@ -241,72 +222,68 @@
                     </span>
                     <span class="text-[9px] font-black uppercase text-orange-500 tracking-wider">Đang chỉ đường</span>
                 </div>
-                <button id="btn-cancel-route-fast" class="text-slate-400 hover:text-red-500 text-[10px] font-black uppercase">✕ Hủy</button>
+                <button id="btn-cancel-route-fast" class="text-slate-400 hover:text-red-500 text-[10px] font-black uppercase">✕ Hủy tuyến</button>
             </div>
             <div class="flex items-center justify-between gap-4">
                 <div class="min-w-0">
                     <p class="text-[9px] text-slate-400 font-bold uppercase">Điểm đến</p>
-                    <p id="route-summary-dest" class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">PHÒNG A0.11</p>
+                    <p id="route-summary-dest" class="text-xs font-black text-slate-800 truncate">PHÒNG A0.11</p>
                 </div>
                 <div class="text-right">
                     <p class="text-[9px] text-slate-400 font-bold uppercase">Ước lượng</p>
-                    <p id="route-summary-steps" class="text-xs font-black text-indigo-600 dark:text-indigo-400 whitespace-nowrap">~45 bước</p>
+                    <p id="route-summary-steps" class="text-xs font-black text-indigo-600 whitespace-nowrap">~45 bước</p>
                 </div>
             </div>
-            <button id="btn-route-switch-floor-fast" class="hidden w-full py-1.5 mt-1 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-lg text-[9px] font-black uppercase">Chuyển sang tầng tiếp theo</button>
+            <button id="btn-route-switch-floor-fast" class="hidden w-full py-2 mt-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase transition-all">Chuyển sang tầng tiếp theo</button>
         </div>
 
-        <!-- QUICK ACTION FLOATING BOTTOM BAR -->
-        <div id="quick-actions-bar" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[130] w-11/12 max-w-sm bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-2xl rounded-2xl p-1.5 flex justify-around items-center border border-white/20 transition-all duration-300">
-            <button class="quick-action-btn flex flex-col items-center p-1.5 text-slate-600 dark:text-slate-400 hover:text-indigo-600" data-type="wc">
-                <span class="text-base">🚻</span><span class="text-[8px] font-bold uppercase">WC</span>
+        <div id="quick-actions-bar" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[130] w-11/12 max-w-sm bg-white/90 backdrop-blur-md shadow-2xl rounded-2xl p-2 flex justify-around items-center border border-white/20 transition-all duration-300">
+            <button class="quick-action-btn flex flex-col items-center p-2 text-slate-600 hover:text-indigo-600 transition-colors" data-type="wc">
+                <span class="text-lg md:text-xl">🚻</span><span class="text-[8px] md:text-[9px] font-bold uppercase">WC</span>
             </button>
-            <button class="quick-action-btn flex flex-col items-center p-1.5 text-slate-600 dark:text-slate-400 hover:text-indigo-600" data-type="canteen">
-                <span class="text-base">☕</span><span class="text-[8px] font-bold uppercase">Căn tin</span>
+            <button class="quick-action-btn flex flex-col items-center p-2 text-slate-600 hover:text-indigo-600 transition-colors" data-type="canteen">
+                <span class="text-lg md:text-xl">☕</span><span class="text-[8px] md:text-[9px] font-bold uppercase">Căn tin</span>
             </button>
-            <button class="quick-action-btn flex flex-col items-center p-1.5 text-slate-600 dark:text-slate-400 hover:text-indigo-600" data-type="library">
-                <span class="text-base">📚</span><span class="text-[8px] font-bold uppercase">T.Viện</span>
+            <button class="quick-action-btn flex flex-col items-center p-2 text-slate-600 hover:text-indigo-600 transition-colors" data-type="library">
+                <span class="text-lg md:text-xl">📚</span><span class="text-[8px] md:text-[9px] font-bold uppercase">T.Viện</span>
             </button>
-            <button class="quick-action-btn flex flex-col items-center p-1.5 text-slate-600 dark:text-slate-400 hover:text-indigo-600" data-type="elevator">
-                <span class="text-base">🛗</span><span class="text-[8px] font-bold uppercase">Thang máy</span>
+            <button class="quick-action-btn flex flex-col items-center p-2 text-slate-600 hover:text-indigo-600 transition-colors" data-type="elevator">
+                <span class="text-lg md:text-xl">🛗</span><span class="text-[8px] md:text-[9px] font-bold uppercase">Thang máy</span>
             </button>
-            <button id="quick-recenter-btn" class="flex flex-col items-center p-1.5 text-slate-600 dark:text-slate-400 hover:text-indigo-600">
-                <span class="text-base">📍</span><span class="text-[8px] font-bold uppercase">Mặc định</span>
+            <button id="quick-recenter-btn" class="flex flex-col items-center p-2 text-slate-600 hover:text-indigo-600 transition-colors">
+                <span class="text-lg md:text-xl">📍</span><span class="text-[8px] md:text-[9px] font-bold uppercase">Mặc định</span>
             </button>
         </div>
 
-        <!-- COMPASS/ANGLE FLOATING INDICATOR -->
-        <div id="next-floor-prompt" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900 shadow-2xl p-3 rounded-2xl flex items-center gap-3 animate-bounce z-50">
-            <p id="prompt-text" class="text-[10px] font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Tiếp theo: Tầng X</p>
-            <button id="btn-switch-floor" class="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-[9px] font-black shadow-lg">CHUYỂN TẦNG</button>
+        <div id="next-floor-prompt" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 bg-white border border-indigo-100 shadow-2xl p-3.5 rounded-2xl flex items-center gap-3.5 animate-bounce z-50">
+            <p id="prompt-text" class="text-[10px] font-black text-slate-800 uppercase tracking-tight">Tiếp theo: Tầng X</p>
+            <button id="btn-switch-floor" class="bg-orange-500 text-white px-3.5 py-2 rounded-lg text-[10px] font-black shadow-lg hover:bg-orange-600 transition-colors">CHUYỂN TẦNG</button>
         </div>
     </main>
 
-    <!-- ADMIN LOGIN MODAL -->
     <div id="login-modal" class="hidden fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl w-full max-w-xs text-center space-y-4 border dark:border-slate-800">
-            <h2 class="text-xs font-black uppercase text-slate-800 dark:text-slate-100 tracking-wider">Xác thực Quản trị</h2>
-            <input id="admin-password" type="password" placeholder="Mật khẩu" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border rounded-xl text-center outline-none focus:ring-2 focus:ring-indigo-500 font-bold tracking-widest text-slate-800 dark:text-slate-100">
+        <div class="bg-white rounded-3xl p-6 shadow-2xl w-full max-w-xs text-center space-y-4 border">
+            <h2 class="text-xs font-black uppercase text-slate-800 tracking-wider">Xác thực Quản trị</h2>
+            <input id="admin-password" type="password" placeholder="Mật khẩu" class="w-full p-3 bg-slate-50 border rounded-xl text-center outline-none focus:ring-2 focus:ring-indigo-500 font-bold tracking-widest text-slate-800">
             <div class="flex gap-2">
-                <button id="btn-login-cancel" class="flex-1 py-2 text-slate-400 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg">Hủy</button>
-                <button id="btn-login-confirm" class="flex-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-md">OK</button>
+                <button id="btn-login-cancel" class="flex-1 py-2.5 text-slate-400 text-xs font-bold hover:bg-slate-50 rounded-lg">Hủy</button>
+                <button id="btn-login-confirm" class="flex-1 py-2.5 bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-md">OK</button>
             </div>
         </div>
     </div>
 
-    <!-- PROPERTIES PANEL -->
-    <div id="props-panel" class="hidden absolute bottom-24 right-4 md:top-4 md:right-4 w-[280px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border dark:border-slate-800 p-4 space-y-4 z-[160]">
-        <div class="flex justify-between items-center border-b pb-2 dark:border-slate-800">
+    <div id="props-panel" class="hidden absolute bottom-24 right-4 md:top-4 md:right-4 w-[280px] bg-white rounded-2xl shadow-2xl border p-4 space-y-4 z-[160]">
+        <div class="flex justify-between items-center border-b pb-2">
             <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cấu hình Điểm</span>
             <button id="btn-close-props" class="text-slate-300 hover:text-slate-600">✕</button>
         </div>
         <div class="space-y-1">
             <label class="text-[9px] font-bold text-slate-400 uppercase">Tên Node/Phòng</label>
-            <input id="node-label-input" type="text" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-bold outline-none">
+            <input id="node-label-input" type="text" class="w-full p-2 bg-slate-50 border text-slate-800 rounded-lg text-xs font-bold outline-none">
         </div>
         <div class="space-y-1">
             <label class="text-[9px] font-bold text-slate-400 uppercase">Khoa / Phòng Ban</label>
-            <input id="node-dept-input" type="text" placeholder="Ví dụ: Công nghệ thông tin" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-lg text-xs outline-none">
+            <input id="node-dept-input" type="text" placeholder="Ví dụ: Công nghệ thông tin" class="w-full p-2 bg-slate-50 border text-slate-800 rounded-lg text-xs outline-none">
         </div>
         <div class="space-y-2">
             <label class="text-[9px] font-bold text-slate-400 uppercase">Phân loại & Định dạng màu</label>
@@ -356,22 +333,39 @@
     const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'mapState', 'main');
 
     const MAP_WIDTH = 1200, MAP_HEIGHT = 800;
-    let nodes = {}, edges = [], currentFloorId = 'A-G', isAdmin = false, mode = 'select', selectedId = null, route = [];
-    let activeStart = null, activeEnd = null, routingPref = 'shortest'; 
+    
+    // CƠ SỞ DỮ LIỆU ĐƯỢC CHIA SẺ TRÊN FIREBASE (Chỉ chứa Nodes & Edges)
+    let nodes = {}, edges = [];
+    
+    // BIẾN ĐỊNH VỊ VÀ ĐƯỜNG ĐI ĐƯỢC CÔ LẬP CHO RIÊNG TỪNG TRÌNH DUYỆT (Không lưu lên server để tránh xung đột)
+    let localStartId = localStorage.getItem('ind_local_start_id') || 'n_cong';
+    let localEndId = null;
+    let route = [];
+    let crossFloorRouting = null;
+
+    // TRẠNG THÁI CHỈ ĐƯỜNG ĐA TẦNG TUẦN TỰ (Sequential Navigation State)
+    let navigationActive = false;
+    let navigationCurrentNodeId = null; // Node ảo hiện tại của hành trình
+    let navigationTargetNodeId = null;  // Đích đến cuối cùng
+    let floorSequence = [];              // Danh sách chuỗi các tầng cần đi qua
+
+    let currentFloorId = 'A-G', isAdmin = false, mode = 'select', selectedId = null;
+    let routingPref = 'shortest'; 
     let view = { x: 0, y: 0, scale: 1, rotation: 0 }; 
     let isPanning = false, lastMousePos = { x: 0, y: 0 }, lastTouchDist = 0; 
     let user = null, loginClickCount = 0;
-    let crossFloorRouting = null; // Trạng thái dẫn đường đa tầng
 
     const floors = [
         { id: 'A-G', area: 'Khu A', name: 'Tầng Trệt', image: 'img/map.png' },
         { id: 'A-1', area: 'Khu A', name: 'Tầng 1', image: 'img/tang1.png' },
         { id: 'A-2', area: 'Khu A', name: 'Tầng 2', image: 'img/tang2.png' },
-        { id: 'B-G', area: 'Khu B', name: 'Tầng Trệt', image: 'https://placehold.co/1200x800/4f46e5/ffffff?text=Khu+B+-+Tang+Tret' },
-        { id: 'B-1', area: 'Khu B', name: 'Tầng 1', image: 'https://placehold.co/1200x800/4f46e5/ffffff?text=Khu+B+-+Tang+1' },
-        { id: 'B-2', area: 'Khu B', name: 'Tầng 2', image: 'https://placehold.co/1200x800/4f46e5/ffffff?text=Khu+B+-+Tang+2' },
-        { id: 'C-G', area: 'Khu C', name: 'Tầng Trệt', image: 'https://placehold.co/1200x800/ef4444/ffffff?text=Khu+C+-+Tang+Tret' },
-        { id: 'D-G', area: 'Khu D', name: 'Tầng Trệt', image: 'https://placehold.co/1200x800/f59e0b/ffffff?text=Khu+D+-+Tang+Tret' }
+        { id: 'B-G', area: 'Khu B', name: 'Tầng Trệt', image: 'img/map.png' },
+        { id: 'B-1', area: 'Khu B', name: 'Tầng 1', image: 'img/tang1 khuB.jpg' },
+        { id: 'B-2', area: 'Khu B', name: 'Tầng 2', image: 'img/tang2 khuB.jpg' },
+        { id: 'B-3', area: 'Khu B', name: 'Tầng 3', image: 'img/tang3 khuB.jpg' },
+        { id: 'B-4', area: 'Khu B', name: 'Tầng 4', image: 'img/tang4 khuB.jpg' },
+        { id: 'C-G', area: 'Khu C', name: 'Tầng Trệt', image: 'img/map.png' },
+        { id: 'D-G', area: 'Khu D', name: 'Tầng Trệt', image: 'img/map.png' }
     ];
 
     const viewport = document.getElementById('viewport');
@@ -381,24 +375,28 @@
     const nodesLayer = document.getElementById('nodes-layer');
     const sidebar = document.getElementById('main-sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
-    const selectStart = document.getElementById('select-start');
-    const selectEnd = document.getElementById('select-end');
     const propsPanel = document.getElementById('props-panel');
     const loginModal = document.getElementById('login-modal');
     const syncStatus = document.getElementById('sync-status');
     const syncText = document.getElementById('sync-text');
     const msgBox = document.getElementById('msg-box');
+    
+    // THANH TÌM KIẾM CHÍNH (Đặc quyền gán xuất phát ngoài sơ đồ)
     const searchInput = document.getElementById('smart-search-input');
     const suggestionsBox = document.getElementById('search-suggestions');
+
+    // CÁC THÀNH PHẦN TRONG SIDEBAR MỚI (Hợp nhất)
+    const sidebarStartInput = document.getElementById('sidebar-start-input');
+    const sidebarStartSuggestions = document.getElementById('sidebar-start-suggestions');
+    const clearSidebarStartBtn = document.getElementById('clear-sidebar-start-btn');
+
+    const sidebarEndInput = document.getElementById('sidebar-end-input');
+    const sidebarEndSuggestions = document.getElementById('sidebar-end-suggestions');
+    const clearSidebarEndBtn = document.getElementById('clear-sidebar-end-btn');
+
     const routeSummaryCard = document.getElementById('route-summary-card');
     const quickActionsBar = document.getElementById('quick-actions-bar');
 
-    // Mới: Khai báo các biến tương tác cho ô check-in thông minh
-    const qrLocationInput = document.getElementById('qr-location-input');
-    const qrSuggestionsBox = document.getElementById('qr-location-suggestions');
-    const clearQrInputBtn = document.getElementById('clear-qr-input-btn');
-
-    // Helper: Vietnamese tones remover
     function removeVietnameseTones(str) {
         str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
         str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
@@ -426,34 +424,35 @@
         setTimeout(() => { msgBox.style.display = 'none'; }, 3000);
     }
 
-    // Default Fallback Database aligning perfectly with multi-floor navigation testing
+    // Trả về ảnh sơ đồ của một tầng cụ thể
+    function getFloorImage(floorId) {
+        const f = floors.find(x => x.id === floorId);
+        return f ? f.image : '';
+    }
+
     function getFallbackData() {
         const fallbackNodes = {
-            "n_cong": { id: "n_cong", x: 230, y: 780, label: "CONG", type: "service", customIcon: "🚪", floor: "A-G", connections: ["w1"] },
-            "n_baixe": { id: "n_baixe", x: 150, y: 480, label: "BAI XE", type: "service", customIcon: "🅿", floor: "A-G", connections: ["w4"] },
-            "n_cantin": { id: "n_cantin", x: 600, y: 620, label: "CANTIN", type: "service", customIcon: "☕", floor: "A-G", connections: ["w5"] },
-            "n_toilet": { id: "n_toilet", x: 250, y: 380, label: "TOILET", type: "service", customIcon: "🚻", floor: "A-G", connections: ["w3"] },
-            "n_a011": { id: "n_a011", x: 200, y: 350, label: "A 0.11", type: "classroom", customIcon: "", floor: "A-G", connections: ["w2"] },
+            "n_cong": { id: "n_cong", x: 230, y: 780, label: "CỔNG CHÍNH", type: "service", customIcon: "🚪", floor: "A-G", connections: ["w1"] },
+            "n_baixe": { id: "n_baixe", x: 150, y: 480, label: "BÃI XE KHU A", type: "service", customIcon: "🅿", floor: "A-G", connections: ["w4"] },
+            "n_cantin": { id: "n_cantin", x: 600, y: 620, label: "CĂN TIN TRỆT", type: "service", customIcon: "☕", floor: "A-G", connections: ["w5"] },
+            "n_toilet": { id: "n_toilet", x: 250, y: 380, label: "NHÀ VỆ SINH TRỆT", type: "service", customIcon: "🚻", floor: "A-G", connections: ["w3"] },
+            "n_a011": { id: "n_a011", x: 200, y: 350, label: "PHÒNG A0.11", type: "classroom", customIcon: "", floor: "A-G", connections: ["w2"] },
             
-            // CẦU THANG ĐÔNG (ĐƯỜNG TRỤC 1)
             "n_stairs_dong_G": { id: "n_stairs_dong_G", x: 400, y: 420, label: "THANG ĐÔNG G", type: "stairs", customIcon: "🪜", floor: "A-G", connections: ["w3", "w5"] },
             "n_stairs_dong_1": { id: "n_stairs_dong_1", x: 400, y: 420, label: "THANG ĐÔNG 1", type: "stairs", customIcon: "🪜", floor: "A-1", connections: ["w11"] },
 
-            // CẦU THANG TÂY (ĐƯỜNG TRỤC 2)
             "n_stairs_tay_G": { id: "n_stairs_tay_G", x: 800, y: 420, label: "THANG TÂY G", type: "stairs", customIcon: "🪜", floor: "A-G", connections: ["w5"] },
             "n_stairs_tay_1": { id: "n_stairs_tay_1", x: 800, y: 420, label: "THANG TÂY 1", type: "stairs", customIcon: "🪜", floor: "A-1", connections: ["w12"] },
             
-            "n_hoitruongA": { id: "n_hoitruongA", x: 620, y: 280, label: "HOI TRUONG A", type: "classroom", customIcon: "👑", floor: "A-1", connections: ["w12"] },
-            "n_phong102": { id: "n_phong102", x: 200, y: 280, label: "PHONG 102", type: "classroom", customIcon: "", floor: "A-1", connections: ["w11"] },
+            "n_hoitruongA": { id: "n_hoitruongA", x: 620, y: 280, label: "HỘI TRƯỜNG A", type: "classroom", customIcon: "👑", floor: "A-1", connections: ["w12"] },
+            "n_phong102": { id: "n_phong102", x: 200, y: 280, label: "PHÒNG A1.02", type: "classroom", customIcon: "", floor: "A-1", connections: ["w11"] },
 
-            // WAYPOINTS TẦNG TRỆT (A-G)
             "w1": { id: "w1", x: 230, y: 680, label: "", type: "waypoint", customIcon: "", floor: "A-G", connections: ["n_cong", "w4"] },
             "w2": { id: "w2", x: 200, y: 410, label: "", type: "waypoint", customIcon: "", floor: "A-G", connections: ["n_a011", "n_toilet"] },
             "w3": { id: "w3", x: 250, y: 410, label: "", type: "waypoint", customIcon: "", floor: "A-G", connections: ["n_toilet", "w4", "n_stairs_dong_G"] },
             "w4": { id: "w4", x: 200, y: 480, label: "", type: "waypoint", customIcon: "", floor: "A-G", connections: ["n_baixe", "w1", "w3", "w5"] },
             "w5": { id: "w5", x: 500, y: 620, label: "", type: "waypoint", customIcon: "", floor: "A-G", connections: ["w4", "n_cantin", "n_stairs_dong_G", "n_stairs_tay_G"] },
 
-            // WAYPOINTS TẦNG 1 (A-1)
             "w11": { id: "w11", x: 300, y: 350, label: "", type: "waypoint", customIcon: "", floor: "A-1", connections: ["n_stairs_dong_1", "n_phong102", "w12"] },
             "w12": { id: "w12", x: 500, y: 350, label: "", type: "waypoint", customIcon: "", floor: "A-1", connections: ["w11", "n_hoitruongA", "n_stairs_tay_1"] }
         };
@@ -468,7 +467,6 @@
         return { fallbackNodes, fallbackEdges };
     }
 
-    // FIREBASE SYNC ENGINE
     async function initCloudSync() {
         try {
             await signInAnonymously(auth);
@@ -478,49 +476,41 @@
                     onSnapshot(stateDocRef, (doc) => {
                         if (doc.exists()) {
                             const data = doc.data();
-                            nodes = data.nodes || {};
+                            
+                            // CHỐNG GHI ĐÈ KHI ĐANG SỬA ĐỔI NODE:
+                            // Nếu đang trong chế độ Admin và đang chỉnh sửa một điểm,
+                            // giữ lại trạng thái chỉnh sửa của node đang được chọn để không bị snapshot Firestore đè lại làm mất ký tự gõ.
+                            if (isAdmin && selectedId && nodes[selectedId]) {
+                                const serverNodes = data.nodes || {};
+                                const activeNodeBackup = { ...nodes[selectedId] };
+                                nodes = serverNodes;
+                                nodes[selectedId] = activeNodeBackup;
+                            } else {
+                                nodes = data.nodes || {};
+                            }
+
                             try {
                                 edges = typeof data.edges === 'string' ? JSON.parse(data.edges) : (data.edges || []);
                             } catch (e) { edges = []; }
                         } else {
-                            // Prepopulate database with beautiful campus mockup aligning with user image
                             const { fallbackNodes, fallbackEdges } = getFallbackData();
                             nodes = fallbackNodes;
                             edges = fallbackEdges;
                             saveData(true);
                         }
-
-                        // Load system configuration parameters
-                        const data = doc.exists() ? doc.data() : {};
-                        activeStart = data.activeStart || null;
-                        activeEnd = data.activeEnd || null;
                         
-                        if(data.rotation !== undefined && data.rotation !== view.rotation && !isPanning) {
-                            view.rotation = data.rotation;
-                            applyTransform();
+                        if (nodes[localStartId]) {
+                            currentFloorId = nodes[localStartId].floor;
                         }
+
                         sanitizeConnections();
                         updateUI();
                         buildQrLocationSelector();
                         
-                        // Automatically update active selection triggers
-                        if (activeStart && activeEnd) {
-                            selectStart.value = activeStart;
-                            selectEnd.value = activeEnd;
-                            calculateAdvancedRoute(activeStart, activeEnd);
-                            document.getElementById('btn-clear-path').classList.remove('hidden');
-                            showRouteSummaryUI(activeEnd);
-                        } else {
-                            route = []; 
-                            // Sửa đổi mặc định: Ưu tiên n_cong (Cổng) làm điểm bắt đầu mặc định nếu trống
-                            if (selectStart.value === "") {
-                                selectStart.value = nodes["n_cong"] ? "n_cong" : "";
-                            }
-                            buildQrLocationSelector(); // Cập nhật hiển thị ô input check-in
-                            selectEnd.value = "";
-                            document.getElementById('btn-clear-path').classList.add('hidden');
-                            hideRouteSummaryUI();
+                        if (localStartId && localEndId) {
+                            updateRouteAndUI();
                         }
+
                         syncStatus.className = 'w-2 h-2 rounded-full bg-green-500';
                         syncText.innerText = 'Synced';
                     }, (err) => {
@@ -529,7 +519,7 @@
                     });
                 }
             });
-        } catch (e) { console.error("Auth error:", e); }
+        } catch (e) { console.error("Cloud connection failed:", e); }
     }
 
     function sanitizeConnections() {
@@ -552,15 +542,15 @@
         syncStatus.className = 'w-2 h-2 rounded-full bg-blue-500 animate-pulse';
         syncText.innerText = 'Saving';
         try {
-            const dataToSave = { nodes, edges: JSON.stringify(edges), activeStart, activeEnd, rotation: view.rotation };
+            const dataToSave = { nodes, edges: JSON.stringify(edges), rotation: view.rotation };
             await setDoc(stateDocRef, dataToSave);
-            if (!silent) showMsg("Đã đồng bộ sơ đồ lên máy chủ!");
+            if (!silent) showMsg("Đã đồng bộ sơ đồ thành công!");
             syncStatus.className = 'w-2 h-2 rounded-full bg-green-500';
             syncText.innerText = 'Synced';
-        } catch (e) { showMsg("Lỗi đồng bộ dữ liệu!", false); }
+        } catch (e) { showMsg("Lỗi đồng bộ sơ đồ!", false); }
     }
 
-    // BFS HELPER FOR SMART SHORTEST PATH FINDING
+    // TỐI ƯU HÓA: Cho phép tìm đường trực tiếp xuyên biên giới các Khu nếu chúng chung một ảnh sơ đồ (mặt bằng ngang)
     function findShortestPath(startId, targetIdOrPredicate) {
         let q = [[startId]], visited = new Set();
         while(q.length > 0) {
@@ -579,7 +569,7 @@
                 visited.add(currId);
                 const conns = currNode.connections || [];
                 conns.forEach(nId => {
-                    if (nodes[nId] && nodes[nId].floor === currNode.floor) {
+                    if (nodes[nId] && getFloorImage(nodes[nId].floor) === getFloorImage(currNode.floor)) {
                         if (routingPref === 'elevator' && nodes[nId].type === 'stairs') return;
                         q.push([...path, nId]);
                     }
@@ -589,113 +579,198 @@
         return null;
     }
 
-    // ADVANCED MULTI-FLOOR ROUTING ALGORITHM (COUPLED VERTICAL SHAFT MECHANISM)
-    function calculateAdvancedRoute(s, e) {
-        const S = nodes[s];
-        const E = nodes[e];
-        if(!S || !E) return;
+    // THUẬT TOÁN TÍNH TOÁN DANH SÁCH CHUỖI CÁC TẦNG ĐI QUA (Hỗ trợ định tuyến tuần tự)
+    function getFloorSequence(startFloor, endFloor) {
+        if (startFloor === endFloor) return [startFloor];
+        
+        const startArea = startFloor.split('-')[0];
+        const endArea = endFloor.split('-')[0];
+        
+        const areaOrders = {
+            'A': ['A-G', 'A-1', 'A-2'],
+            'B': ['B-G', 'B-1', 'B-2', 'B-3', 'B-4'],
+            'C': ['C-G'],
+            'D': ['D-G']
+        };
 
-        crossFloorRouting = null;
-
-        if (S.floor === E.floor) {
-            // Định tuyến cùng một tầng đơn thuần
-            route = findShortestPath(s, e) || [];
-            renderEdges(); 
-            renderNodes(); 
-            checkNextFloorPrompt();
-            autoFocusRoute();
+        if (startArea === endArea) {
+            const list = areaOrders[startArea] || [];
+            const startIdx = list.indexOf(startFloor);
+            const endIdx = list.indexOf(endFloor);
+            if (startIdx === -1 || endIdx === -1) return [startFloor, endFloor];
+            
+            const seq = [];
+            if (startIdx <= endIdx) {
+                for (let i = startIdx; i <= endIdx; i++) seq.push(list[i]);
+            } else {
+                for (let i = startIdx; i >= endIdx; i--) seq.push(list[i]);
+            }
+            return seq;
         } else {
-            // Định tuyến ĐA TẦNG qua hệ thống liên trục thẳng đứng (Staircase Shaft Coupling)
-            // Bước 1: Tìm kiếm tất cả các đầu nối trung chuyển (thang bộ / thang máy) trên tầng xuất phát
-            const transitionCandidates = Object.values(nodes).filter(node => 
-                node.floor === S.floor && 
-                (node.type === 'stairs' || node.type === 'elevator')
-            );
-
-            let bestLeg1 = null;
-            let bestLeg2 = null;
-            let bestTotalLength = Infinity;
-            let bestStartTransitionId = null;
-            let bestEndTransitionId = null;
-
-            // Bước 2: Duyệt từng thang để tìm ra thang bộ phù hợp nhất giúp tối ưu hóa tổng quãng đường
-            transitionCandidates.forEach(tStartNode => {
-                // Tìm kiếm thang tương ứng trên tầng đích có cùng loại (stairs/elevator)
-                const targetTransitions = Object.values(nodes).filter(node => 
-                    node.floor === E.floor && 
-                    node.type === tStartNode.type
-                );
-
-                if (targetTransitions.length === 0) return;
-
-                // Đồng bộ chính xác thang ở tầng trên thông qua cự ly tọa độ hình chiếu XY ngắn nhất (Vertical Shaft Matcher)
-                let bestTargetNode = null;
-                let minDistance = Infinity;
-
-                targetTransitions.forEach(tEndNode => {
-                    const dx = tStartNode.x - tEndNode.x;
-                    const dy = tStartNode.y - tEndNode.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < minDistance) {
-                        minDistance = dist;
-                        bestTargetNode = tEndNode;
-                    }
-                });
-
-                if (!bestTargetNode) return;
-
-                // Tính toán lộ trình định tuyến thử cho trục thang đã chọn
-                const leg1 = findShortestPath(s, tStartNode.id);
-                const leg2Reverse = findShortestPath(e, bestTargetNode.id);
-                const leg2 = leg2Reverse ? [...leg2Reverse].reverse() : null;
-
-                if (leg1 && leg2) {
-                    const totalLength = leg1.length + leg2.length;
-                    if (totalLength < bestTotalLength) {
-                        bestTotalLength = totalLength;
-                        bestLeg1 = leg1;
-                        bestLeg2 = leg2;
-                        bestStartTransitionId = tStartNode.id;
-                        bestEndTransitionId = bestTargetNode.id;
-                    }
+            // Trường hợp liên khu vực (VD: Từ lầu 1 Khu A sang lầu 3 Khu B -> Đi xuống trệt A, sang trệt B, đi lên lầu 3 B)
+            const toGround = areaOrders[startArea] ? areaOrders[startArea][0] : startFloor;
+            const fromGround = areaOrders[endArea] ? areaOrders[endArea][0] : endFloor;
+            
+            const leg1 = getFloorSequence(startFloor, toGround);
+            const leg2 = getFloorSequence(fromGround, endFloor);
+            
+            const combined = [...leg1];
+            leg2.forEach(f => {
+                if (combined[combined.length - 1] !== f) {
+                    combined.push(f);
                 }
             });
-
-            if (bestLeg1 && bestLeg2) {
-                // Thiết lập liên kết đa tầng đồng nhất
-                crossFloorRouting = {
-                    startFloor: S.floor,
-                    endFloor: E.floor,
-                    transitionStartId: bestStartTransitionId,
-                    transitionEndId: bestEndTransitionId,
-                    leg1: bestLeg1,
-                    leg2: bestLeg2
-                };
-
-                updateActiveRouteLeg();
-                renderEdges();
-                renderNodes();
-                checkNextFloorPrompt();
-                autoFocusRoute();
-            } else {
-                showMsg("Không tìm thấy đường nối đa tầng qua cầu thang bộ/thang máy phù hợp!", false);
-                route = [];
-                renderEdges();
-                renderNodes();
-            }
+            return combined;
         }
     }
 
-    function updateActiveRouteLeg() {
-        if (crossFloorRouting) {
-            if (currentFloorId === crossFloorRouting.startFloor) {
-                route = crossFloorRouting.leg1;
-            } else if (currentFloorId === crossFloorRouting.endFloor) {
-                route = crossFloorRouting.leg2;
-            } else {
-                route = [];
+    // TÌM CẦU THANG/THANG MÁY KẾT NỐI TỐI ƯU NHẤT GIỮA HAI TẦNG KỀ NHAU (Dựa trên quãng đường và vị trí XY)
+    function findBestTransition(fromFloor, toFloor, fromNodeId, finalDestNodeId) {
+        const startNode = nodes[fromNodeId];
+        if (!startNode) return null;
+        
+        const candidates = Object.values(nodes).filter(n => n.floor === fromFloor && (n.type === 'stairs' || n.type === 'elevator'));
+        let bestTransitionStart = null;
+        let bestTransitionEnd = null;
+        let bestScore = Infinity; 
+        
+        candidates.forEach(tStartNode => {
+            const matchingEnds = Object.values(nodes).filter(n => n.floor === toFloor && n.type === tStartNode.type);
+            if (matchingEnds.length === 0) return;
+            
+            // Đối khớp trục kỹ thuật đứng chính xác nhất bằng khoảng cách hình chiếu 2D XY
+            let closestEndNode = null;
+            let minDistance = Infinity;
+            matchingEnds.forEach(tEndNode => {
+                const dx = tStartNode.x - tEndNode.x;
+                const dy = tStartNode.y - tEndNode.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestEndNode = tEndNode;
+                }
+            });
+            
+            if (!closestEndNode) return;
+            
+            // Tính điểm tối ưu: Tổng số bước đi tới thang hiện tại + Ước lượng khoảng cách từ thang đích đến phòng cuối cùng
+            const path1 = findShortestPath(fromNodeId, tStartNode.id);
+            if (path1) {
+                const destNode = nodes[finalDestNodeId];
+                let distToDest = 0;
+                if (destNode) {
+                    const dx = closestEndNode.x - destNode.x;
+                    const dy = closestEndNode.y - destNode.y;
+                    distToDest = Math.sqrt(dx * dx + dy * dy);
+                }
+                const score = path1.length + distToDest / 50; 
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestTransitionStart = tStartNode;
+                    bestTransitionEnd = closestEndNode;
+                }
+            }
+        });
+        
+        if (bestTransitionStart && bestTransitionEnd) {
+            return { start: bestTransitionStart, end: bestTransitionEnd };
+        }
+        return null;
+    }
+
+    // ĐỘNG CƠ CẬP NHẬT TUYẾN ĐƯỜNG ĐA TẦNG TUẦN TỰ (Sequential Route State Updater)
+    // TỐI ƯU: Nhóm các khu vực nằm cùng một mặt phẳng ngang (Trệt) để hiển thị lộ trình đi bộ ngang trước khi chuyển tầng.
+    function updateRouteAndUI() {
+        if (!localStartId || !localEndId) {
+            route = [];
+            crossFloorRouting = null;
+            navigationActive = false;
+            hideRouteSummaryUI();
+            updateUI();
+            return;
+        }
+
+        const S = nodes[localStartId];
+        const E = nodes[localEndId];
+        if (!S || !E) return;
+
+        // Khởi tạo tiến trình dẫn đường ảo tuần tự nếu mới bắt đầu hoặc đổi điểm đích
+        if (!navigationActive || navigationTargetNodeId !== localEndId) {
+            navigationActive = true;
+            navigationCurrentNodeId = localStartId;
+            navigationTargetNodeId = localEndId;
+            floorSequence = getFloorSequence(S.floor, E.floor);
+        }
+
+        const currentNavNode = nodes[navigationCurrentNodeId];
+        if (!currentNavNode) return;
+
+        const navFloor = currentNavNode.floor;
+        const currentFloorIdx = floorSequence.indexOf(navFloor);
+
+        route = [];
+        crossFloorRouting = null;
+
+        // Đảm bảo màn hình hiển thị (map viewed floor) nhảy mượt mà về đúng tầng mà người dùng đang đứng ảo trong hành trình
+        if (currentFloorId !== navFloor) {
+            currentFloorId = navFloor;
+            updateUI(); 
+            return; // Dừng lại để đợi map load xong ảnh của tầng mới rồi chạy lại
+        }
+
+        const currentMapImage = getFloorImage(navFloor);
+        const targetMapImage = getFloorImage(E.floor);
+
+        if (currentMapImage === targetMapImage) {
+            // Đã cùng mặt phẳng sơ đồ hiển thị (vd: cùng nằm trên sơ đồ trệt chung), vẽ đường đi trực tiếp ngang
+            route = findShortestPath(navigationCurrentNodeId, localEndId) || [];
+        } else {
+            // Khác mặt phẳng sơ đồ, cần tìm điểm thang gần nhất để chuyển tầng tiếp theo trong sequence
+            let nextMapFloor = null;
+            for (let i = currentFloorIdx + 1; i < floorSequence.length; i++) {
+                if (getFloorImage(floorSequence[i]) !== currentMapImage) {
+                    nextMapFloor = floorSequence[i];
+                    break;
+                }
+            }
+
+            if (nextMapFloor) {
+                // Liệt kê mọi tầng cùng dùng chung sơ đồ hiển thị này (vd: A-G, B-G, C-G, D-G)
+                const sameMapFloors = floors.filter(f => f.image === currentMapImage).map(f => f.id);
+                
+                let bestTransition = null;
+                let bestScore = Infinity;
+
+                sameMapFloors.forEach(fId => {
+                    const trans = findBestTransition(fId, nextMapFloor, navigationCurrentNodeId, localEndId);
+                    if (trans) {
+                        const path = findShortestPath(navigationCurrentNodeId, trans.start.id);
+                        if (path) {
+                            const score = path.length;
+                            if (score < bestScore) {
+                                bestScore = score;
+                                bestTransition = trans;
+                            }
+                        }
+                    }
+                });
+
+                if (bestTransition) {
+                    route = findShortestPath(navigationCurrentNodeId, bestTransition.start.id) || [];
+                    crossFloorRouting = {
+                        startFloor: bestTransition.start.floor,
+                        endFloor: bestTransition.end.floor,
+                        transitionStartId: bestTransition.start.id,
+                        transitionEndId: bestTransition.end.id
+                    };
+                }
             }
         }
+
+        renderEdges();
+        renderNodes();
+        checkNextFloorPrompt();
+        autoFocusRoute();
     }
 
     function applyTransform() { 
@@ -703,7 +778,7 @@
     }
 
     function setupInitialView() {
-        const sidebarWidth = (window.innerWidth >= 768 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
+        const sidebarWidth = (window.innerWidth >= 1024 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
         const vW = viewport.clientWidth;
         const vH = viewport.clientHeight;
         const visibleWidth = vW - sidebarWidth;
@@ -717,10 +792,19 @@
         renderNodes();
     }
 
-    // AUTO ZOOM WITH CENTER VIEWPORT OFFSET
     function autoFocusRoute() {
         if(route.length === 0) return;
-        const currentFloorNodes = route.map(id => nodes[id]).filter(n => n && n.floor === currentFloorId);
+        const currentFloorIdVal = currentFloorId;
+        const currentFloorObj = floors.find(x => x.id === currentFloorIdVal);
+        const currentMapImage = currentFloorObj ? currentFloorObj.image : '';
+
+        // Tối ưu auto focus: Lấy tất cả nodes trên tuyến đường có chung hình ảnh sơ đồ đang hiển thị
+        const currentFloorNodes = route.map(id => nodes[id]).filter(n => {
+            if (!n) return false;
+            const fObj = floors.find(x => x.id === n.floor);
+            return fObj && fObj.image === currentMapImage;
+        });
+        
         if(currentFloorNodes.length === 0) return;
 
         let minX = MAP_WIDTH, maxX = 0, minY = MAP_HEIGHT, maxY = 0;
@@ -732,7 +816,7 @@
         const midX = (minX + maxX) / 2;
         const midY = (minY + maxY) / 2;
 
-        const sidebarWidth = (window.innerWidth >= 768 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
+        const sidebarWidth = (window.innerWidth >= 1024 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
         const vW = viewport.clientWidth;
         const vH = viewport.clientHeight;
         const visibleWidth = vW - sidebarWidth;
@@ -752,7 +836,7 @@
 
     function focusSingleNode(node) {
         if (!node) return;
-        const sidebarWidth = (window.innerWidth >= 768 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
+        const sidebarWidth = (window.innerWidth >= 1024 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
         const vW = viewport.clientWidth;
         const vH = viewport.clientHeight;
         const visibleWidth = vW - sidebarWidth;
@@ -764,7 +848,6 @@
         renderNodes();
     }
 
-    // TOGGLE SIDEBAR CONTROLLER WITH TRANSITION SMOOTHNESS
     function toggleSidebar(show) {
         if (show) {
             sidebar.classList.remove('-translate-x-full');
@@ -776,7 +859,6 @@
         setTimeout(() => setupInitialView(), 310);
     }
 
-    // ACCORDION MENUS FOR FLOOR MANAGER
     function updateUI() {
         const accordionContainer = document.getElementById('floor-accordion-container');
         accordionContainer.innerHTML = '';
@@ -786,10 +868,10 @@
             const isCurrentArea = floors.find(f => f.id === currentFloorId)?.area === area;
 
             const groupDiv = document.createElement('div');
-            groupDiv.className = "bg-slate-50 dark:bg-slate-800/40 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800";
+            groupDiv.className = "bg-slate-50 rounded-xl overflow-hidden border border-slate-100";
             
             groupDiv.innerHTML = `
-                <button class="w-full flex items-center justify-between p-3 text-left font-black text-[10px] text-slate-700 dark:text-slate-300 uppercase tracking-wide bg-slate-100/70 dark:bg-slate-800/80">
+                <button class="w-full flex items-center justify-between p-3 text-left font-black text-[10px] text-slate-700 uppercase tracking-wide bg-slate-100/70">
                     <span>🏢 ${area}</span>
                     <span class="transform transition-transform text-[8px] ${isCurrentArea ? 'rotate-180' : ''}">▼</span>
                 </button>
@@ -814,7 +896,7 @@
 
             floors.filter(f => f.area === area).forEach(f => {
                 const fBtn = document.createElement('button');
-                fBtn.className = `w-full flex items-center justify-between p-2.5 rounded-lg text-[10px] font-bold uppercase transition-all ${currentFloorId === f.id ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50'}`;
+                fBtn.className = `w-full flex items-center justify-between p-2.5 rounded-lg text-[10px] font-bold uppercase transition-all ${currentFloorId === f.id ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200/50'}`;
                 fBtn.innerHTML = `<span>${f.name}</span>`;
                 fBtn.onclick = () => window.changeFloor(f.id);
                 contentDiv.appendChild(fBtn);
@@ -828,10 +910,8 @@
             mapImage.src = currentFloor.image;
         }
 
-        updateActiveRouteLeg();
         renderNodes(); 
         renderEdges(); 
-        updateSelectOptions(); 
         checkNextFloorPrompt();
     }
 
@@ -840,115 +920,254 @@
         updateUI(); 
     };
 
-    // Mới: Cấu trúc lại bộ quản lý hiển thị Check-In hiện tại dạng Input Autocomplete
     function buildQrLocationSelector() {
-        // Thiết lập mặc định là n_cong (Cổng) nếu chưa có lựa chọn
-        if (!selectStart.value && nodes["n_cong"]) {
-            selectStart.value = "n_cong";
+        if (!localStartId && nodes["n_cong"]) {
+            localStartId = "n_cong";
+            localStorage.setItem('ind_local_start_id', 'n_cong');
         }
         
-        const startNodeId = selectStart.value;
-        if (startNodeId && nodes[startNodeId]) {
-            qrLocationInput.value = nodes[startNodeId].label.toUpperCase();
-            clearQrInputBtn.classList.remove('hidden');
+        if (localStartId && nodes[localStartId]) {
+            const startLabel = nodes[localStartId].label.toUpperCase();
+            searchInput.value = startLabel;
+            sidebarStartInput.value = startLabel;
+            
+            document.getElementById('clear-search-btn').classList.remove('hidden');
+            clearSidebarStartBtn.classList.remove('hidden');
         } else {
-            qrLocationInput.value = "";
-            clearQrInputBtn.classList.add('hidden');
+            searchInput.value = "";
+            sidebarStartInput.value = "";
+            
+            document.getElementById('clear-search-btn').classList.add('hidden');
+            clearSidebarStartBtn.classList.add('hidden');
+        }
+
+        if (localEndId && nodes[localEndId]) {
+            sidebarEndInput.value = nodes[localEndId].label.toUpperCase();
+            clearSidebarEndBtn.classList.remove('hidden');
+        } else {
+            sidebarEndInput.value = "";
+            clearSidebarEndBtn.classList.add('hidden');
         }
     }
 
-    // Mới: Xử lý hiển thị gợi ý tìm kiếm cho điểm check-in (Vị trí xuất phát)
-    function showQrSuggestions(filterText = "") {
+    // TỐI ƯU HÓA: Cố định vị trí hiển thị ở tầng xuất phát khi gán điểm đến bằng ô nhập sidebar gợi ý (Không tự động nhảy tầng đích đột ngột)
+    function showLocationSuggestions(filterText, suggestionsContainer, inputRole) {
         const value = normalizeTypo(filterText);
-        // Loại bỏ hoàn toàn các điểm nối waypoint khỏi danh sách checkin gợi ý
-        const checkInNodes = Object.values(nodes || {}).filter(n => n && n.label && n.type !== 'waypoint');
         
-        const matches = checkInNodes.filter(n => {
+        const validNodes = Object.values(nodes || {}).filter(n => {
+            if (!n || !n.label || n.type === 'waypoint') return false;
+            return floors.some(f => f.id === n.floor); 
+        });
+        
+        const matches = validNodes.filter(n => {
             const labelNorm = normalizeTypo(n.label);
             const deptNorm = normalizeTypo(n.dept || '');
             return labelNorm.includes(value) || deptNorm.includes(value);
         });
 
-        if (matches.length > 0) {
-            qrSuggestionsBox.innerHTML = '';
-            qrSuggestionsBox.classList.remove('hidden');
-            matches.forEach(n => {
-                const floorObj = floors.find(f => f.id === n.floor) || { area: "Khu", name: "Tầng" };
-                const item = document.createElement('div');
-                item.className = "p-2.5 border-b border-slate-100 dark:border-slate-800 last:border-none cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 flex justify-between items-center text-xs text-slate-800 dark:text-slate-200 font-bold transition-colors";
-                item.innerHTML = `
-                    <div class="pointer-events-none">
-                        <span class="uppercase text-indigo-600 dark:text-indigo-400">${n.customIcon || '📍'} ${n.label}</span>
-                        ${n.dept ? `<span class="text-[9px] text-slate-400 block font-medium">${n.dept}</span>` : ''}
-                    </div>
-                    <span class="text-[9px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500 font-black pointer-events-none">${floorObj.area} - ${floorObj.name}</span>
-                `;
-                item.onclick = (e) => {
-                    e.stopPropagation();
-                    selectStart.value = n.id;
-                    qrLocationInput.value = n.label.toUpperCase();
-                    qrSuggestionsBox.classList.add('hidden');
-                    clearQrInputBtn.classList.remove('hidden');
-                    
-                    currentFloorId = n.floor;
-                    updateUI();
-                    
-                    // Nếu đã chọn điểm đến trước đó, tự động chạy tìm tuyến đường
-                    if (selectEnd.value && selectEnd.value !== n.id) {
-                        document.getElementById('btn-find-path').click();
-                    } else {
-                        focusSingleNode(n);
-                    }
-                };
-                qrSuggestionsBox.appendChild(item);
-            });
-        } else {
-            qrSuggestionsBox.classList.add('hidden');
-        }
-    }
-
-    function updateSelectOptions() {
-        // Loại bỏ hoàn toàn các điểm nối trung gian (waypoint) khỏi thanh lựa chọn định tuyến thủ công
-        const locations = Object.values(nodes).filter(n => n.label && n.type !== 'waypoint');
-        let optionsHtml = '<option value="">-- CHỌN VỊ TRÍ --</option>';
-        
-        floors.forEach(f => {
-            const nodesInFloor = locations.filter(n => n.floor === f.id).sort((a, b) => a.label.localeCompare(b.label));
-            if (nodesInFloor.length > 0) {
-                optionsHtml += `<optgroup label="--- ${f.area.toUpperCase()} - ${f.name.toUpperCase()} ---">`;
-                nodesInFloor.forEach(n => {
-                    optionsHtml += `<option value="${n.id}">${n.label.toUpperCase()}</option>`;
-                });
-                optionsHtml += `</optgroup>`;
+        const uniqueMatches = [];
+        const seenKeys = new Set();
+        matches.forEach(n => {
+            const key = `${n.label.toUpperCase()}_${n.floor}`;
+            if (!seenKeys.has(key)) {
+                seenKeys.add(key);
+                uniqueMatches.push(n);
             }
         });
 
-        const sVal = selectStart.value, eVal = selectEnd.value;
-        selectStart.innerHTML = optionsHtml; selectEnd.innerHTML = optionsHtml;
-        if(nodes[sVal]) selectStart.value = sVal; if(nodes[eVal]) selectEnd.value = eVal;
+        if (uniqueMatches.length > 0) {
+            suggestionsContainer.innerHTML = '';
+            suggestionsContainer.classList.remove('hidden');
+            uniqueMatches.forEach(n => {
+                const floorObj = floors.find(f => f.id === n.floor); 
+                const item = document.createElement('div');
+                item.className = "p-3 border-b border-slate-100 last:border-none cursor-pointer hover:bg-slate-50 flex justify-between items-center text-xs text-slate-800 font-bold transition-colors";
+                item.innerHTML = `
+                    <div class="pointer-events-none">
+                        <span class="uppercase text-indigo-600">${n.customIcon || '📍'} ${n.label}</span>
+                        ${n.dept ? `<span class="text-[9px] text-slate-400 block font-medium">${n.dept}</span>` : ''}
+                    </div>
+                    <span class="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-black pointer-events-none">${floorObj.area} - ${floorObj.name}</span>
+                `;
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    
+                    if (inputRole === 'start') {
+                        localStartId = n.id;
+                        localStorage.setItem('ind_local_start_id', n.id);
+                        navigationActive = false; // Reset lại định tuyến mới
+                        
+                        showMsg("Đã đặt vị trí hiện tại: " + n.label.toUpperCase());
+                        
+                        // Chuyển tầng sơ đồ hiển thị khớp với điểm xuất phát
+                        currentFloorId = n.floor;
+                        
+                        if (localEndId && localEndId !== n.id) {
+                            updateRouteAndUI();
+                        } else {
+                            updateUI();
+                            focusSingleNode(n);
+                            setTimeout(() => {
+                                sidebarEndInput.focus();
+                                showLocationSuggestions("", sidebarEndSuggestions, 'end');
+                            }, 400);
+                        }
+                    } else if (inputRole === 'end') {
+                        localEndId = n.id;
+                        navigationActive = false; // Reset định tuyến mới
+                        
+                        if (!localStartId) {
+                            localStartId = "n_cong";
+                            localStorage.setItem('ind_local_start_id', 'n_cong');
+                        }
+
+                        showMsg("Đang vẽ tuyến đường đến: " + n.label.toUpperCase());
+                        
+                        // Gọi updateRouteAndUI() để định tuyến từ điểm đầu tiên, tự động căn về tầng hiện tại của startId
+                        updateRouteAndUI();
+                        showRouteSummaryUI(localEndId);
+                    }
+
+                    buildQrLocationSelector();
+                    suggestionsContainer.classList.add('hidden');
+                };
+                suggestionsContainer.appendChild(item);
+            });
+        } else {
+            suggestionsContainer.classList.add('hidden');
+        }
     }
 
-    // DYNAMIC SEMANTIC ZOOM & PIN DILUTION ENGINE
+    // 1. Ô tìm kiếm chính bên ngoài
+    searchInput.oninput = (e) => {
+        const rawValue = e.target.value;
+        const value = normalizeTypo(rawValue);
+        const clearBtn = document.getElementById('clear-search-btn');
+
+        if(value.length > 0) clearBtn.classList.remove('hidden');
+        else { 
+            clearBtn.classList.add('hidden'); 
+            suggestionsBox.classList.add('hidden'); 
+            return; 
+        }
+
+        showLocationSuggestions(rawValue, suggestionsBox, 'start');
+    };
+
+    searchInput.onfocus = () => {
+        showLocationSuggestions(searchInput.value, suggestionsBox, 'start');
+    };
+
+    document.getElementById('clear-search-btn').onclick = () => {
+        searchInput.value = '';
+        localStartId = '';
+        localStorage.removeItem('ind_local_start_id');
+        buildQrLocationSelector();
+        document.getElementById('clear-search-btn').classList.add('hidden');
+        suggestionsBox.classList.add('hidden');
+        if (route.length > 0 || navigationActive) {
+            document.getElementById('btn-cancel-route-fast').click();
+        }
+    };
+
+    // 2. Ô nhập Xuất Phát trong Sidebar
+    sidebarStartInput.oninput = (e) => {
+        const rawValue = e.target.value;
+        const value = normalizeTypo(rawValue);
+        if(value.length > 0) clearSidebarStartBtn.classList.remove('hidden');
+        else {
+            clearSidebarStartBtn.classList.add('hidden');
+            sidebarStartSuggestions.classList.add('hidden');
+            return;
+        }
+        showLocationSuggestions(rawValue, sidebarStartSuggestions, 'start');
+    };
+
+    sidebarStartInput.onfocus = () => {
+        showLocationSuggestions(sidebarStartInput.value, sidebarStartSuggestions, 'start');
+    };
+
+    clearSidebarStartBtn.onclick = () => {
+        sidebarStartInput.value = '';
+        localStartId = '';
+        localStorage.removeItem('ind_local_start_id');
+        buildQrLocationSelector();
+        clearSidebarStartBtn.classList.add('hidden');
+        sidebarStartSuggestions.classList.add('hidden');
+        if (route.length > 0 || navigationActive) {
+            document.getElementById('btn-cancel-route-fast').click();
+        }
+    };
+
+    // 3. Ô nhập Đích Đến trong Sidebar
+    sidebarEndInput.oninput = (e) => {
+        const rawValue = e.target.value;
+        const value = normalizeTypo(rawValue);
+        if(value.length > 0) clearSidebarEndBtn.classList.remove('hidden');
+        else {
+            clearSidebarEndBtn.classList.add('hidden');
+            sidebarEndSuggestions.classList.add('hidden');
+            return;
+        }
+        showLocationSuggestions(rawValue, sidebarEndSuggestions, 'end');
+    };
+
+    sidebarEndInput.onfocus = () => {
+        showLocationSuggestions(sidebarEndInput.value, sidebarEndSuggestions, 'end');
+    };
+
+    clearSidebarEndBtn.onclick = () => {
+        sidebarEndInput.value = '';
+        localEndId = null;
+        buildQrLocationSelector();
+        clearSidebarEndBtn.classList.add('hidden');
+        sidebarEndSuggestions.classList.add('hidden');
+        if (route.length > 0 || navigationActive) {
+            document.getElementById('btn-cancel-route-fast').click();
+        }
+    };
+
+    // Đóng danh sách gợi ý khi click ra ngoài
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput && !e.target.closest('#search-suggestions')) {
+            suggestionsBox.classList.add('hidden');
+        }
+        if (e.target !== sidebarStartInput && !e.target.closest('#sidebar-start-suggestions')) {
+            sidebarStartSuggestions.classList.add('hidden');
+        }
+        if (e.target !== sidebarEndInput && !e.target.closest('#sidebar-end-suggestions')) {
+            sidebarEndSuggestions.classList.add('hidden');
+        }
+    });
+
+    // TỐI ƯU HÓA: Hiển thị đồng thời các điểm thuộc các khu vực khác nhau nhưng có chung một tệp ảnh sơ đồ nền
     function renderNodes() {
         nodesLayer.innerHTML = '';
         const isRouteActive = route.length > 0;
         const scale = view.scale;
 
-        if (!isAdmin && isRouteActive) {
-            mapImage.classList.add('dimmed-map');
-        } else {
-            mapImage.classList.remove('dimmed-map');
-        }
+        mapImage.classList.remove('dimmed-map');
 
-        Object.values(nodes).filter(n => n.floor === currentFloorId).forEach(node => {
+        const currentFloorObj = floors.find(x => x.id === currentFloorId);
+        const currentMapImage = currentFloorObj ? currentFloorObj.image : '';
+
+        Object.values(nodes).filter(n => {
+            const fObj = floors.find(x => x.id === n.floor);
+            return fObj && fObj.image === currentMapImage;
+        }).forEach(node => {
             const isSelected = selectedId === node.id;
-            const isNavStart = selectStart.value === node.id;
-            const isNavEnd = selectEnd.value === node.id;
+            const isNavStart = localStartId === node.id;
+            const isNavEnd = localEndId === node.id;
             const isPartOfRoute = route.includes(node.id);
+
+            // Xác định xem node hiện tại có phải là vị trí ảo của người dùng hay không
+            const isUserCurrentVirtualLoc = navigationActive && navigationCurrentNodeId === node.id;
+
+            // Xác định xem đây có phải là điểm cầu thang chuyển tiếp hiện tại của hành trình
+            const isTransitionStart = crossFloorRouting && node.id === crossFloorRouting.transitionStartId;
 
             if (!isAdmin && node.type === 'waypoint') return;
 
-            // Semantic rules to hide/dilute clutter based on Zoom factor & Route State
             let showThisNode = false;
             let showLabel = false;
 
@@ -956,8 +1175,7 @@
                 showThisNode = true;
                 showLabel = true;
             } else if (isRouteActive) {
-                // When routing: ONLY show Start, End, or key landmarks on path
-                if (isNavStart || isNavEnd) {
+                if (isNavStart || isNavEnd || isUserCurrentVirtualLoc || isTransitionStart) {
                     showThisNode = true;
                     showLabel = true;
                 } else if (isPartOfRoute && (node.type === 'stairs' || node.type === 'elevator' || node.customIcon)) {
@@ -965,20 +1183,16 @@
                     showLabel = true;
                 }
             } else {
-                // Free Browsing: Semantic Zoom Hierarchy
                 if (node.type === 'classroom' || node.type === 'office') {
-                    // Show minor rooms ONLY on high zoom
                     if (scale >= 1.4) {
                         showThisNode = true;
                         showLabel = true;
                     }
                 } else if (node.type === 'service' || node.type === 'emergency' || node.customIcon) {
-                    // Show restrooms, lifts, exits on medium zoom
                     showThisNode = true;
                     showLabel = scale >= 1.1;
                 } else {
-                    // Show major structural landmarks always
-                    if (node.label && (node.label.includes("KHU") || node.label.includes("CỔNG") || node.label.includes("CONG") || node.label.includes("SÂN") || node.label.includes("CANTIN") || node.label.includes("KTX"))) {
+                    if (node.label && (node.label.includes("KHU") || node.label.includes("CỔNG") || node.label.includes("SÂN") || node.label.includes("CANTIN"))) {
                         showThisNode = true;
                         showLabel = true;
                     }
@@ -989,49 +1203,47 @@
 
             const div = document.createElement('div');
             let stateClass = isSelected ? 'ring-4 ring-indigo-500' : '';
-            if (isNavStart) stateClass += ' current-loc-pulse';
+            if (isUserCurrentVirtualLoc || isNavStart || isTransitionStart) stateClass += ' current-loc-pulse';
 
             div.className = `node-ui absolute flex flex-col items-center z-20 ${stateClass}`;
             div.style.left = `${node.x}px`; div.style.top = `${node.y}px`;
             div.style.transform = `translate(-50%, -50%) rotate(${-view.rotation}deg)`; 
 
-            // Standard category colors
             let color = 'bg-slate-400';
             if (node.type === 'classroom') color = 'cat-classroom';
             else if (node.type === 'office') color = 'cat-office';
             else if (node.type === 'service') color = 'cat-service';
             else if (node.type === 'emergency') color = 'cat-emergency';
 
-            if (isNavStart) color = 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950';
-            if (isNavEnd) color = 'bg-orange-500 ring-4 ring-orange-100 dark:ring-orange-950 animate-bounce';
+            if (isUserCurrentVirtualLoc || isNavStart) color = 'bg-emerald-500 ring-4 ring-emerald-100';
+            if (isNavEnd) color = 'bg-orange-500 ring-4 ring-orange-100 animate-bounce';
+            if (isTransitionStart) color = 'bg-indigo-600 ring-4 ring-indigo-200 animate-pulse'; // Phát sáng sóng chuyển tiếp
 
-            // Thay đổi kích thước icon stairs / elevator khi đang dẫn đường để dễ ấn
-            let size = isNavStart || isNavEnd ? 22 : (isPartOfRoute && (node.type === 'stairs' || node.type === 'elevator') ? 20 : (scale >= 1.6 ? 14 : 10));
+            let size = (isUserCurrentVirtualLoc || isNavStart) || isNavEnd || isTransitionStart ? 22 : (isPartOfRoute && (node.type === 'stairs' || node.type === 'elevator') ? 20 : (scale >= 1.6 ? 14 : 10));
             
-            // THAY ĐỔI: Sử dụng Icon người đi bộ (🚶) hoặc biểu tượng định vị đặc biệt khi check-in thay vì chấm tròn đơn điệu
             let displayIcon = node.customIcon || "📍";
-            if (isNavStart) displayIcon = "🚶"; // Đã đổi 🟢 thành 🚶 để người dùng không bị lộn
+            if (isUserCurrentVirtualLoc || isNavStart) displayIcon = "🚶";
             if (isNavEnd) displayIcon = "🎯";
+            if (isTransitionStart) displayIcon = "🪜"; // Cầu thang nhấp nháy chuyển tiếp
 
-            // If zooming out, draw small clean dots instead of full icons
-            const useMiniDot = !isNavStart && !isNavEnd && !isPartOfRoute && scale < 1.3;
+            const useMiniDot = !(isUserCurrentVirtualLoc || isNavStart) && !isNavEnd && !isPartOfRoute && scale < 1.3;
 
             div.innerHTML = useMiniDot ? `
-                <div class="rounded-full border border-white dark:border-slate-900 ${color} shadow-md hover:scale-125 transition-transform" style="width: 8px; height: 8px;"></div>
+                <div class="rounded-full border border-white ${color} shadow-md hover:scale-125 transition-transform" style="width: 8px; height: 8px;"></div>
                 ${showLabel && node.label ? `<div class="map-label mt-0.5">${node.label.toUpperCase()}</div>` : ''}
             ` : `
-                <div class="rounded-full border-2 border-white dark:border-slate-900 ${color} flex items-center justify-center shadow-lg text-white font-bold hover:scale-110 transition-transform" style="width: ${size}px; height: ${size}px; font-size: ${size * 0.5}px;">
+                <div class="rounded-full border-2 border-white ${color} flex items-center justify-center shadow-lg text-white font-bold hover:scale-110 transition-transform" style="width: ${size}px; height: ${size}px; font-size: ${size * 0.5}px;">
                     ${displayIcon}
                 </div>
                 ${showLabel && node.label ? `
                     <div class="map-label mt-1 text-center">
-                        ${isNavStart ? '<span class="text-[7px] text-emerald-500 block uppercase tracking-tighter font-extrabold">BẠN Ở ĐÂY</span>' : ''}
+                        ${isUserCurrentVirtualLoc || isNavStart ? '<span class="text-[7px] text-emerald-500 block uppercase tracking-tighter font-extrabold">BẠN Ở ĐÂY</span>' : ''}
+                        ${isTransitionStart ? '<span class="text-[7px] text-indigo-600 block uppercase tracking-tighter font-extrabold animate-bounce">BẤM LÊN TẦNG</span>' : ''}
                         ${node.label.toUpperCase()}
                     </div>
                 ` : ''}
             `;
 
-            // Admin drag logic
             let sX, sY, hM = false, startNodeX, startNodeY;
             const onS = (cX, cY) => {
                 if (!isAdmin) return;
@@ -1069,18 +1281,20 @@
         });
     }
 
+    // TỐI ƯU HÓA: Vẽ đường nét đứt dẫn hướng đi bộ liên tục trên cùng mặt bằng ngang
     function renderEdges() {
         svgLayer.innerHTML = '';
-        const isDarkMode = document.getElementById('app-root').classList.contains('dark-mode');
+        const currentFloorObj = floors.find(x => x.id === currentFloorId);
+        const currentMapImage = currentFloorObj ? currentFloorObj.image : '';
         
         if (isAdmin) {
             edges.forEach(edge => {
                 const n1 = nodes[edge[0]], n2 = nodes[edge[1]];
-                if (n1 && n2 && n1.floor === currentFloorId && n2.floor === currentFloorId) {
+                if (n1 && n2 && getFloorImage(n1.floor) === currentMapImage && getFloorImage(n2.floor) === currentMapImage) {
                     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                     line.setAttribute("x1", n1.x); line.setAttribute("y1", n1.y);
                     line.setAttribute("x2", n2.x); line.setAttribute("y2", n2.y);
-                    line.setAttribute("stroke", isDarkMode ? "#334155" : "#e2e8f0"); 
+                    line.setAttribute("stroke", "#cbd5e1"); 
                     line.setAttribute("stroke-width", "1.5");
                     line.setAttribute("stroke-dasharray", "3");
                     svgLayer.appendChild(line);
@@ -1090,7 +1304,7 @@
         
         for (let i = 0; i < route.length - 1; i++) {
             const n1 = nodes[route[i]], n2 = nodes[route[i+1]];
-            if (n1 && n2 && n1.floor === currentFloorId && n2.floor === currentFloorId) {
+            if (n1 && n2 && getFloorImage(n1.floor) === currentMapImage && getFloorImage(n2.floor) === currentMapImage) {
                 const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                 line.setAttribute("x1", n1.x); line.setAttribute("y1", n1.y);
                 line.setAttribute("x2", n2.x); line.setAttribute("y2", n2.y);
@@ -1101,7 +1315,6 @@
         }
     }
 
-    // INTERACTIVE NODE CLICKS (SMART INSTANT PATHFINDING)
     function handleNodeClick(id) {
         const node = nodes[id]; if(!node) return;
         if (isAdmin) {
@@ -1111,26 +1324,40 @@
             }
             renderNodes();
         } else {
-            // Khi người dùng click trực tiếp vào cầu thang/thang máy đang là điểm tiếp theo trên lộ trình
+            // Chuyển tầng mượt mà khi nhấp trực tiếp vào cầu thang dẫn đường trên bản đồ
             if (crossFloorRouting && (id === crossFloorRouting.transitionStartId || id === crossFloorRouting.transitionEndId)) {
-                const targetFloorId = (currentFloorId === crossFloorRouting.startFloor) ? crossFloorRouting.endFloor : crossFloorRouting.startFloor;
+                const targetFloorId = crossFloorRouting.endFloor;
                 window.changeFloor(targetFloorId);
-                showMsg(`Đã di chuyển thang lên ${floors.find(f => f.id === targetFloorId).name.toUpperCase()}`);
+                
+                // Cập nhật vị trí ảo lên tầng tiếp theo
+                navigationCurrentNodeId = crossFloorRouting.transitionEndId;
+                showMsg(`Đã lên ${floors.find(f => f.id === targetFloorId).name.toUpperCase()} - Tiếp tục di chuyển!`);
+                updateRouteAndUI();
                 return;
             }
 
             if (node.type !== 'waypoint') {
-                if (!selectStart.value) {
-                    selectStart.value = id;
-                    buildQrLocationSelector(); // Đồng bộ cập nhật text input check-in
-                    showMsg("Điểm bắt đầu: " + node.label);
+                if (!localStartId) {
+                    localStartId = id;
+                    localStorage.setItem('ind_local_start_id', id);
+                    navigationActive = false;
+                    buildQrLocationSelector();
+                    showMsg("Đã đặt điểm xuất phát: " + node.label);
                     focusSingleNode(node);
-                } else if (selectStart.value === id) {
-                    showMsg("Bạn đã ở vị trí này rồi!", false);
+                    
+                    setTimeout(() => {
+                        sidebarEndInput.placeholder = `📍 Điểm đến tiếp theo từ [${node.label}]?`;
+                        sidebarEndInput.focus();
+                        showLocationSuggestions("", sidebarEndSuggestions, 'end');
+                    }, 450);
+                } else if (localStartId === id) {
+                    showMsg("Bạn đang ở vị trí này rồi!", false);
                 } else {
-                    selectEnd.value = id;
+                    localEndId = id;
+                    navigationActive = false;
                     showMsg("Đang vẽ tuyến đường đến: " + node.label);
-                    document.getElementById('btn-find-path').click();
+                    buildQrLocationSelector();
+                    updateRouteAndUI();
                 }
                 renderNodes();
             }
@@ -1143,30 +1370,45 @@
         renderEdges();
     }
 
-    // CONDITIONAL ROUTING DETAILS HUD
     function showRouteSummaryUI(destId) {
         const destNode = nodes[destId];
         if(!destNode) return;
 
         routeSummaryCard.classList.remove('hidden');
-        quickActionsBar.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none'); // Hide actions to save space
+        quickActionsBar.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
         document.getElementById('route-summary-dest').innerText = destNode.label.toUpperCase();
         
+        // Tính tổng số bước ước tính toàn bộ chặng di chuyển đa tầng
         let totalNodesCount = route.length;
-        if (crossFloorRouting) {
-            totalNodesCount = crossFloorRouting.leg1.length + crossFloorRouting.leg2.length;
+        if (navigationActive && floorSequence.length > 1) {
+            // Đếm sơ bộ số lượng nút của toàn lộ trình liên tầng tuần tự
+            totalNodesCount = floorSequence.length * 8; 
         }
         const steps = Math.round(totalNodesCount * 12);
-        document.getElementById('route-summary-steps').innerText = `~${steps} bước`;
+        
+        // Hiển thị thông tin chặng di chuyển hiện tại cho sinh động
+        let stepProgressText = "";
+        if (navigationActive && floorSequence.length > 1) {
+            const currentNavNode = nodes[navigationCurrentNodeId];
+            const currentFloorIdx = floorSequence.indexOf(currentNavNode?.floor);
+            if (currentFloorIdx !== -1) {
+                stepProgressText = `Chặng ${currentFloorIdx + 1}/${floorSequence.length}: `;
+            }
+        }
+        document.getElementById('route-summary-steps').innerText = `${stepProgressText}~${steps} bước`;
 
         const fastSwitchBtn = document.getElementById('btn-route-switch-floor-fast');
-        if (crossFloorRouting && currentFloorId === crossFloorRouting.startFloor) {
+        if (crossFloorRouting) {
             fastSwitchBtn.classList.remove('hidden');
             const targetFloor = floors.find(f => f.id === crossFloorRouting.endFloor);
             fastSwitchBtn.innerText = `BẤM LÊN ${targetFloor.name.toUpperCase()} (${targetFloor.area.toUpperCase()})`;
             fastSwitchBtn.onclick = () => {
                 window.changeFloor(crossFloorRouting.endFloor);
-                showMsg(`Đã lên ${targetFloor.name} - Đi tiếp đến phòng đích!`);
+                
+                // Cập nhật vị trí ảo lên tầng tiếp theo
+                navigationCurrentNodeId = crossFloorRouting.transitionEndId;
+                showMsg(`Đã di chuyển lên ${targetFloor.name.toUpperCase()}`);
+                updateRouteAndUI();
             };
         } else {
             fastSwitchBtn.classList.add('hidden');
@@ -1180,101 +1422,24 @@
 
     function checkNextFloorPrompt() {
         const p = document.getElementById('next-floor-prompt');
-        if (crossFloorRouting && currentFloorId === crossFloorRouting.startFloor) {
+        if (crossFloorRouting) {
             p.classList.remove('hidden');
             const targetFloor = floors.find(f => f.id === crossFloorRouting.endFloor);
             const stairsName = nodes[crossFloorRouting.transitionStartId]?.label || "CẦU THANG";
-            document.getElementById('prompt-text').innerText = `TIẾP THEO: LÊN TẦNG QUA [${stairsName}]`;
+            document.getElementById('prompt-text').innerText = `TIẾP THEO: LÊN ${targetFloor.name.toUpperCase()} QUA [${stairsName}]`;
             document.getElementById('btn-switch-floor').onclick = () => {
                 window.changeFloor(crossFloorRouting.endFloor);
+                
+                // Cập nhật vị trí ảo lên tầng tiếp theo
+                navigationCurrentNodeId = crossFloorRouting.transitionEndId;
+                showMsg(`Đã di chuyển lên ${targetFloor.name.toUpperCase()}`);
+                updateRouteAndUI();
             };
         } else {
             p.classList.add('hidden');
         }
     }
 
-    function updatePropsUI() {
-        const node = nodes[selectedId]; if(!node) return;
-        document.getElementById('node-label-input').value = node.label || "";
-        document.getElementById('node-dept-input').value = node.dept || "";
-        
-        document.querySelectorAll('.type-opt').forEach(btn => {
-            const t = btn.id.replace('btn-type-', '');
-            btn.className = `type-opt p-2 border rounded-lg text-[9px] font-black text-left transition-all ${node.type === t ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'}`;
-        });
-
-        document.querySelectorAll('.icon-opt').forEach(btn => {
-            const icon = btn.dataset.icon;
-            btn.className = `icon-opt border p-1 rounded text-center text-xs transition-all ${node.customIcon === icon ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`;
-        });
-    }
-
-    // SMART AUTO-COMPLETE SEARCH LOGIC
-    searchInput.oninput = (e) => {
-        const rawValue = e.target.value;
-        const value = normalizeTypo(rawValue);
-        const clearBtn = document.getElementById('clear-search-btn');
-
-        if(value.length > 0) clearBtn.classList.remove('hidden');
-        else { clearBtn.classList.add('hidden'); suggestionsBox.classList.add('hidden'); return; }
-
-        const matchNodes = Object.values(nodes || {}).filter(n => {
-            if(!n || !n.label) return false;
-            // Chặn hoàn toàn các điểm nối trung gian (waypoint) xuất hiện trong kết quả tự động gợi ý tìm kiếm
-            if(n.type === 'waypoint') return false; 
-            const labelNorm = normalizeTypo(n.label);
-            const deptNorm = normalizeTypo(n.dept || '');
-            const typeNorm = normalizeTypo(n.type || '');
-            return labelNorm.includes(value) || deptNorm.includes(value) || typeNorm.includes(value);
-        });
-
-        if(matchNodes.length > 0) {
-            suggestionsBox.innerHTML = '';
-            suggestionsBox.classList.remove('hidden');
-            
-            matchNodes.forEach(n => {
-                const floorObj = floors.find(f => f.id === n.floor) || { area: "Khu", name: "Tầng" };
-                const item = document.createElement('div');
-                item.className = "p-3 border-b border-slate-100 dark:border-slate-800 last:border-none cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/80 flex justify-between items-center text-xs text-slate-800 dark:text-slate-200 font-bold transition-colors";
-                item.innerHTML = `
-                    <div class="pointer-events-none">
-                        <p class="uppercase text-indigo-600 dark:text-indigo-400">${n.customIcon || '📍'} ${n.label}</p>
-                        ${n.dept ? `<p class="text-[10px] text-slate-400 font-medium">${n.dept}</p>` : ''}
-                    </div>
-                    <span class="text-[9px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 uppercase font-black pointer-events-none">${floorObj.area} - ${floorObj.name}</span>
-                `;
-                item.onclick = (event) => {
-                    event.stopPropagation();
-                    selectEnd.value = n.id;
-                    const fallbackStart = Object.keys(nodes).find(key => nodes[key].floor === n.floor && nodes[key].type !== 'waypoint') || '';
-                    selectStart.value = selectStart.value || fallbackStart;
-                    buildQrLocationSelector(); // Cập nhật đồng bộ ô input check-in
-                    suggestionsBox.classList.add('hidden');
-                    searchInput.value = n.label.toUpperCase();
-                    
-                    currentFloorId = n.floor;
-                    updateUI();
-                    
-                    if(selectStart.value && selectStart.value !== n.id) {
-                        document.getElementById('btn-find-path').click();
-                    } else {
-                        focusSingleNode(n);
-                    }
-                };
-                suggestionsBox.appendChild(item);
-            });
-        } else {
-            suggestionsBox.classList.add('hidden');
-        }
-    };
-
-    document.getElementById('clear-search-btn').onclick = () => {
-        searchInput.value = '';
-        document.getElementById('clear-search-btn').classList.add('hidden');
-        suggestionsBox.classList.add('hidden');
-    };
-
-    // PANNING & ZOOMING RENDERING LISTENERS
     const handleStart = (cX, cY) => { isPanning = true; lastMousePos = { x: cX, y: cY }; };
     const handleMove = (cX, cY) => {
         if (!isPanning) return;
@@ -1290,7 +1455,7 @@
         const mX = (e.clientX - view.x) / view.scale, mY = (e.clientY - view.y) / view.scale;
         view.x = e.clientX - mX * nS; view.y = e.clientY - mY * nS; view.scale = nS;
         applyTransform();
-        renderNodes(); // Dynamic render on zoom
+        renderNodes();
     };
 
     viewport.onmousedown = (e) => { 
@@ -1300,7 +1465,6 @@
     window.onmousemove = (e) => { handleMove(e.clientX, e.clientY); };
     window.onmouseup = handleEnd;
 
-    // Double-tap zoom gesture
     let lastTap = 0;
     viewport.addEventListener('touchend', (e) => {
         let currentTime = new Date().getTime();
@@ -1336,15 +1500,6 @@
     }, { passive: false });
     viewport.addEventListener('touchend', handleEnd);
 
-    // DARK MODE SYSTEM INTERACTIVE
-    document.getElementById('toggle-dark-mode').onclick = () => {
-        const root = document.getElementById('app-root');
-        root.classList.toggle('dark');
-        root.classList.toggle('dark-mode');
-        renderEdges();
-    };
-
-    // FLOATING QUICK ACTIONS BAR
     document.querySelectorAll('.quick-action-btn').forEach(btn => {
         btn.onclick = () => {
             const type = btn.dataset.type;
@@ -1353,18 +1508,25 @@
             if(availableNodes.length > 0) {
                 let target = availableNodes.find(n => n.floor === currentFloorId) || availableNodes[0];
                 currentFloorId = target.floor;
-                selectEnd.value = target.id;
-                selectStart.value = selectStart.value || "n_cong";
+                localEndId = target.id;
+                navigationActive = false;
+                
+                if (!localStartId) {
+                    localStartId = "n_cong";
+                    localStorage.setItem('ind_local_start_id', 'n_cong');
+                }
+                
                 updateUI();
-                document.getElementById('btn-find-path').click();
-                showMsg(`Định vị tới [${target.label}] gần nhất`);
+                updateRouteAndUI();
+                buildQrLocationSelector();
+                showRouteSummaryUI(localEndId);
+                showMsg(`Đang dẫn đường tới [${target.label}] gần nhất`);
             } else {
-                showMsg("Chưa tìm thấy thiết bị dịch vụ này trên tầng!", false);
+                showMsg("Chưa tìm thấy thiết bị dịch vụ tương ứng trên sơ đồ!", false);
             }
         };
     });
 
-    // SIDEBAR NAVIGATION & OVERLAYS INTERACTION
     document.getElementById('menu-trigger-btn').onclick = () => toggleSidebar(true);
     document.getElementById('close-sidebar-btn').onclick = () => toggleSidebar(false);
     sidebarOverlay.onclick = () => toggleSidebar(false);
@@ -1376,63 +1538,50 @@
         view.rotation = (view.rotation + 90) % 360; applyTransform(); renderNodes();
     };
 
-    // Mới: Thay thế hành vi quét QR để check-in ngẫu nhiên tại một địa điểm hợp lệ
     document.getElementById('qr-mock-btn').onclick = () => {
-        const locationNodes = Object.values(nodes).filter(n => n.label && n.type !== 'waypoint');
+        const locationNodes = Object.values(nodes).filter(n => {
+            if (!n || !n.label || n.type === 'waypoint') return false;
+            return floors.some(f => f.id === n.floor); 
+        });
         if (locationNodes.length > 0) {
             const randomNode = locationNodes[Math.floor(Math.random() * locationNodes.length)];
-            selectStart.value = randomNode.id;
-            qrLocationInput.value = randomNode.label.toUpperCase();
-            clearQrInputBtn.classList.remove('hidden');
+            
+            localStartId = randomNode.id;
+            localStorage.setItem('ind_local_start_id', randomNode.id);
+            navigationActive = false;
+            buildQrLocationSelector();
+            
             currentFloorId = randomNode.floor;
             updateUI();
             focusSingleNode(randomNode);
-            showMsg(`📲 Đã quét QR: Vị trí xuất phát của bạn đặt ở [${randomNode.label.toUpperCase()}]`);
-            if (selectEnd.value && selectEnd.value !== randomNode.id) {
-                document.getElementById('btn-find-path').click();
+            showMsg(`📲 Đã check-in thành công vị trí tại: [${randomNode.label.toUpperCase()}]`);
+            
+            if (localEndId && localEndId !== randomNode.id) {
+                updateRouteAndUI();
+                showRouteSummaryUI(localEndId);
+            } else {
+                setTimeout(() => {
+                    toggleSidebar(true);
+                    sidebarEndInput.placeholder = `📍 Điểm muốn đến từ [${randomNode.label}]?`;
+                    sidebarEndInput.focus();
+                    showLocationSuggestions("", sidebarEndSuggestions, 'end');
+                }, 500);
             }
         }
     };
 
-    // Mới: Lắng nghe sự kiện bàn phím/tìm kiếm cho ô Check-in xuất phát
-    qrLocationInput.oninput = (e) => {
-        const val = e.target.value;
-        if (val.length > 0) clearQrInputBtn.classList.remove('hidden');
-        else clearQrInputBtn.classList.add('hidden');
-        showQrSuggestions(val);
-    };
-
-    qrLocationInput.onfocus = () => {
-        showQrSuggestions(qrLocationInput.value);
-    };
-
-    clearQrInputBtn.onclick = () => {
-        qrLocationInput.value = '';
-        selectStart.value = '';
-        clearQrInputBtn.classList.add('hidden');
-        qrSuggestionsBox.classList.add('hidden');
-        if (route.length > 0) {
-            document.getElementById('btn-clear-path').click();
-        }
-    };
-
-    // Đóng danh sách gợi ý khi bấm ra ngoài
-    document.addEventListener('click', (e) => {
-        if (e.target !== qrLocationInput && !e.target.closest('#qr-location-suggestions')) {
-            qrSuggestionsBox.classList.add('hidden');
-        }
-    });
-
     document.querySelectorAll('.pref-btn').forEach(btn => {
         btn.onclick = () => {
             document.querySelectorAll('.pref-btn').forEach(b => b.className = "pref-btn py-1.5 text-[9px] font-black uppercase rounded-lg transition-all text-slate-500");
-            btn.className = "pref-btn py-1.5 text-[9px] font-black uppercase rounded-lg transition-all bg-white dark:bg-slate-800 text-indigo-600 shadow-sm";
+            btn.className = "pref-btn py-1.5 text-[9px] font-black uppercase rounded-lg transition-all bg-white text-indigo-600 shadow-sm";
             routingPref = btn.dataset.pref;
-            if(selectStart.value && selectEnd.value) document.getElementById('btn-find-path').click();
+            if(localStartId && localEndId) {
+                updateRouteAndUI();
+                showRouteSummaryUI(localEndId);
+            }
         };
     });
 
-    // ADMIN PRIVILEGES
     document.getElementById('secret-login-trigger').onclick = () => {
         loginClickCount++; if (loginClickCount >= 5) { loginModal.classList.remove('hidden'); loginClickCount = 0; }
     };
@@ -1440,6 +1589,7 @@
         if(document.getElementById('admin-password').value === 'Nsg@2026') {
             isAdmin = true; loginModal.classList.add('hidden');
             document.getElementById('admin-tools').classList.remove('hidden'); updateUI();
+            showMsg("Đã kích hoạt chế độ nhà phát triển!");
         } else alert("Mật khẩu truy cập không chính xác!");
     };
     document.getElementById('btn-login-cancel').onclick = () => loginModal.classList.add('hidden');
@@ -1447,61 +1597,79 @@
 
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.onclick = () => {
-            document.querySelectorAll('.tool-btn').forEach(b => b.className = "tool-btn p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-black uppercase");
+            document.querySelectorAll('.tool-btn').forEach(b => b.className = "tool-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[9px] font-black uppercase");
             btn.className = "tool-btn p-2 rounded-xl border border-transparent bg-indigo-600 text-white text-[9px] font-black uppercase";
             mode = btn.dataset.mode; selectedId = null; propsPanel.classList.add('hidden'); renderNodes();
         };
     });
 
     document.getElementById('btn-save-all').onclick = () => { sanitizeConnections(); saveData(); };
-    
-    document.getElementById('btn-find-path').onclick = () => {
-        const s = selectStart.value, e = selectEnd.value;
-        if(!s || !e) return;
-        activeStart = s; activeEnd = e;
-        
-        // Auto-close sidebar to maximize screen estate for zoom bounds
-        toggleSidebar(false);
-        
-        saveData(true); 
-        calculateAdvancedRoute(s, e);
-        if (route.length === 0) { 
-            showMsg("Không tìm thấy đường nối khả dụng!", false); 
-        } else { 
-            document.getElementById('btn-clear-path').classList.remove('hidden'); 
-            showRouteSummaryUI(e);
-        }
-    };
 
-    document.getElementById('btn-clear-path').onclick = () => {
-        route = []; activeStart = null; activeEnd = null; 
-        selectEnd.value = "";
+    // HỦY TUYẾN ĐƯỜNG DẪN ĐƯỜNG CỤC BỘ
+    document.getElementById('btn-cancel-route-fast').onclick = () => {
+        route = []; 
+        localEndId = null;
         crossFloorRouting = null;
-        document.getElementById('btn-clear-path').classList.add('hidden'); 
+        navigationActive = false;
+        navigationCurrentNodeId = null;
+        navigationTargetNodeId = null;
+        floorSequence = [];
+        
+        buildQrLocationSelector();
         hideRouteSummaryUI();
-        saveData(true); 
         updateUI();
         setupInitialView();
     };
 
-    document.getElementById('btn-cancel-route-fast').onclick = () => {
-        document.getElementById('btn-clear-path').click();
-    };
+    function updatePropsUI() {
+        const node = nodes[selectedId]; if(!node) return;
+        document.getElementById('node-label-input').value = node.label || "";
+        document.getElementById('node-dept-input').value = node.dept || "";
+        
+        document.querySelectorAll('.type-opt').forEach(btn => {
+            const t = btn.id.replace('btn-type-', '');
+            btn.className = `type-opt p-2 border rounded-lg text-[9px] font-black text-left transition-all ${node.type === t ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white text-slate-400 border-slate-200'}`;
+        });
+
+        document.querySelectorAll('.icon-opt').forEach(btn => {
+            const icon = btn.dataset.icon;
+            btn.className = `icon-opt border p-1 rounded text-center text-xs transition-all ${node.customIcon === icon ? 'bg-orange-500 text-white' : 'bg-white text-slate-700'}`;
+        });
+    }
 
     document.getElementById('btn-close-props').onclick = () => { selectedId = null; propsPanel.classList.add('hidden'); renderNodes(); };
     
+    // TỐI ƯU SỰ KIỆN: Chỉ kích hoạt lưu (saveData) khi thay đổi hoàn tất để tránh nghẽn luồng tiêu điểm
     document.getElementById('node-label-input').oninput = (e) => {
-        if(selectedId) { nodes[selectedId].label = e.target.value.toUpperCase(); renderNodes(); updateSelectOptions(); saveData(true); }
+        if(selectedId) { 
+            nodes[selectedId].label = e.target.value.toUpperCase(); 
+            renderNodes(); 
+        }
     };
+    document.getElementById('node-label-input').onchange = (e) => {
+        if(selectedId) {
+            saveData(true);
+        }
+    };
+
     document.getElementById('node-dept-input').oninput = (e) => {
-        if(selectedId) { nodes[selectedId].dept = e.target.value; updateSelectOptions(); saveData(true); }
+        if(selectedId) { 
+            nodes[selectedId].dept = e.target.value; 
+        }
+    };
+    document.getElementById('node-dept-input').onchange = (e) => {
+        if(selectedId) {
+            saveData(true);
+        }
     };
 
     document.querySelectorAll('.type-opt').forEach(btn => {
         btn.onclick = () => {
             if(selectedId) {
                 nodes[selectedId].type = btn.id.replace('btn-type-', '');
-                updatePropsUI(); renderNodes(); updateSelectOptions(); saveData(true);
+                updatePropsUI(); 
+                renderNodes(); 
+                saveData(true);
             }
         };
     });
@@ -1510,7 +1678,10 @@
         btn.onclick = () => {
             if(selectedId) {
                 nodes[selectedId].customIcon = btn.dataset.icon;
-                updatePropsUI(); renderNodes(); buildQrLocationSelector(); saveData(true);
+                updatePropsUI(); 
+                renderNodes(); 
+                buildQrLocationSelector(); 
+                saveData(true);
             }
         };
     });
