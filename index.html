@@ -128,7 +128,7 @@
         <div class="p-5 border-b border-slate-100 bg-gradient-to-br from-indigo-700 to-violet-900 text-white flex justify-between items-center">
             <div>
                 <h1 class="font-bold text-base leading-tight">Indoor Nav PRO</h1>
-                <p class="text-[9px] opacity-70 uppercase tracking-widest text-orange-300 font-bold">Advanced Smart Core v8.12</p>
+                <p class="text-[9px] opacity-70 uppercase tracking-widest text-orange-300 font-bold">Advanced Smart Core v8.14</p>
             </div>
             <button id="close-sidebar-btn" class="p-1.5 text-white/60 hover:text-white rounded-lg hover:bg-white/10 lg:hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -141,6 +141,9 @@
             <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl relative shadow-sm space-y-3">
                 <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">🔍 Thiết lập lộ trình</span>
                 
+                <!-- Trạng thái chặng di chuyển -->
+                <div id="sidebar-route-status" class="hidden text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 p-2.5 rounded-xl text-center uppercase tracking-tight animate-pulse"></div>
+
                 <div class="relative flex flex-col gap-3 pl-6">
                     <!-- Đường kẻ nét đứt nối hai vị trí -->
                     <div class="absolute left-3.5 top-4 bottom-4 w-px border-l-2 border-dashed border-slate-300"></div>
@@ -197,7 +200,7 @@
                 <span id="sync-status" class="w-2 h-2 rounded-full bg-yellow-500"></span>
                 <span id="sync-text" class="font-bold uppercase text-[8px]">Connecting</span>
             </div>
-            <span id="secret-login-trigger" class="font-bold uppercase text-[8px] cursor-pointer">v8.12 CLOUD</span>
+            <span id="secret-login-trigger" class="font-bold uppercase text-[8px] cursor-pointer">v8.13 CLOUD</span>
         </div>
     </aside>
 
@@ -297,9 +300,17 @@
                 <button id="btn-type-office" class="type-opt p-2 border rounded-lg text-[9px] font-black text-left">🟣 VĂN PHÒNG</button>
                 <button id="btn-type-service" class="type-opt p-2 border rounded-lg text-[9px] font-black text-left">🟡 DỊCH VỤ</button>
                 <button id="btn-type-emergency" class="type-opt p-2 border rounded-lg text-[9px] font-black text-left">🔴 KHẨN CẤP</button>
-                <button id="btn-type-waypoint" class="type-opt p-2 border rounded-lg text-[9px] font-black text-left col-span-2">⚪ ĐIỂM NỐI TRUNG GIAN</button>
+                <button id="btn-type-waypoint" class="type-opt p-2 border rounded-lg text-[9px] font-black text-left">⚪ ĐIỂM NỐI</button>
+                <button id="btn-type-transition" class="type-opt p-2 border rounded-lg text-[9px] font-black text-left">🔵 CẦU THANG</button>
             </div>
         </div>
+        
+        <!-- BẢNG LIÊN KẾT ĐẦU NỐI (Chỉ dành riêng cho Cầu thang/Thang máy) -->
+        <div id="props-panel-transition-link" class="space-y-1 hidden">
+            <label class="text-[9px] font-bold text-slate-400 uppercase">Liên kết tới Node lầu khác</label>
+            <select id="node-connected-select" class="w-full p-2.5 bg-slate-50 border text-slate-800 rounded-lg text-xs outline-none font-bold"></select>
+        </div>
+
         <div class="space-y-2">
             <label class="text-[9px] font-bold text-slate-400 uppercase">Biểu tượng chức năng</label>
             <div class="grid grid-cols-4 gap-1">
@@ -413,6 +424,7 @@
 
     const routeSummaryCard = document.getElementById('route-summary-card');
     const quickActionsBar = document.getElementById('quick-actions-bar');
+    const sidebarRouteStatus = document.getElementById('sidebar-route-status');
 
     function removeVietnameseTones(str) {
         str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
@@ -455,11 +467,11 @@
             "n_toilet": { id: "n_toilet", x: 250, y: 380, label: "NHÀ VỆ SINH TRỆT", type: "service", customIcon: "🚻", floor: "A-G", connections: ["w3"] },
             "n_a011": { id: "n_a011", x: 200, y: 350, label: "PHÒNG A0.11", type: "classroom", customIcon: "", floor: "A-G", connections: ["w2"] },
             
-            "n_stairs_dong_G": { id: "n_stairs_dong_G", x: 400, y: 420, label: "THANG ĐÔNG G", type: "stairs", customIcon: "🪜", floor: "A-G", connections: ["w3", "w5"] },
-            "n_stairs_dong_1": { id: "n_stairs_dong_1", x: 400, y: 420, label: "THANG ĐÔNG 1", type: "stairs", customIcon: "🪜", floor: "A-1", connections: ["w11"] },
+            "n_stairs_dong_G": { id: "n_stairs_dong_G", x: 400, y: 420, label: "THANG ĐÔNG G", type: "transition", customIcon: "🪜", floor: "A-G", connections: ["w3", "w5"] },
+            "n_stairs_dong_1": { id: "n_stairs_dong_1", x: 400, y: 420, label: "THANG ĐÔNG 1", type: "transition", customIcon: "🪜", floor: "A-1", connections: ["w11"] },
 
-            "n_stairs_tay_G": { id: "n_stairs_tay_G", x: 800, y: 420, label: "THANG TÂY G", type: "stairs", customIcon: "🪜", floor: "A-G", connections: ["w5"] },
-            "n_stairs_tay_1": { id: "n_stairs_tay_1", x: 800, y: 420, label: "THANG TÂY 1", type: "stairs", customIcon: "🪜", floor: "A-1", connections: ["w12"] },
+            "n_stairs_tay_G": { id: "n_stairs_tay_G", x: 800, y: 420, label: "THANG TÂY G", type: "transition", customIcon: "🪜", floor: "A-G", connections: ["w5"] },
+            "n_stairs_tay_1": { id: "n_stairs_tay_1", x: 800, y: 420, label: "THANG TÂY 1", type: "transition", customIcon: "🪜", floor: "A-1", connections: ["w12"] },
             
             "n_hoitruongA": { id: "n_hoitruongA", x: 620, y: 280, label: "HỘI TRƯỜNG A", type: "classroom", customIcon: "👑", floor: "A-1", connections: ["w12"] },
             "n_phong102": { id: "n_phong102", x: 200, y: 280, label: "PHÒNG A1.02", type: "classroom", customIcon: "", floor: "A-1", connections: ["w11"] },
@@ -644,27 +656,41 @@
         const startNode = nodes[fromNodeId];
         if (!startNode) return null;
         
-        const candidates = Object.values(nodes).filter(n => n.floor === fromFloor && (n.type === 'stairs' || n.type === 'elevator'));
+        const candidates = Object.values(nodes).filter(n => n.floor === fromFloor && (n.type === 'stairs' || n.type === 'elevator' || n.type === 'transition'));
         let bestTransitionStart = null;
         let bestTransitionEnd = null;
         let bestScore = Infinity; 
         
+        // Bản đồ cặp kết nối tĩnh làm Fallback khẩn cấp
+        const transitionPairs = {
+           "n_stairs_dong_G": "n_stairs_dong_1",
+           "n_stairs_dong_1": "n_stairs_dong_G",
+           "n_stairs_tay_G": "n_stairs_tay_1",
+           "n_stairs_tay_1": "n_stairs_tay_G"
+        };
+
         candidates.forEach(tStartNode => {
-            const matchingEnds = Object.values(nodes).filter(n => n.floor === toFloor && n.type === tStartNode.type);
+            const matchingEnds = Object.values(nodes).filter(n => n.floor === toFloor && (n.type === tStartNode.type || n.type === 'transition' || n.type === 'stairs' || n.type === 'elevator'));
             if (matchingEnds.length === 0) return;
             
-            // Đối khớp trục kỹ thuật đứng chính xác nhất bằng khoảng cách hình chiếu 2D XY
+            // Đối khớp điểm đích chuyển tiếp bằng (1) connectedNode cấu hình từ admin, hoặc (2) hardcoded transitionPairs, hoặc (3) Khoảng cách XY gần nhất
             let closestEndNode = null;
-            let minDistance = Infinity;
-            matchingEnds.forEach(tEndNode => {
-                const dx = tStartNode.x - tEndNode.x;
-                const dy = tStartNode.y - tEndNode.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < minDistance) {
-                    minDistance = dist;
-                    closestEndNode = tEndNode;
-                }
-            });
+            if (tStartNode.connectedNode && nodes[tStartNode.connectedNode] && nodes[tStartNode.connectedNode].floor === toFloor) {
+                closestEndNode = nodes[tStartNode.connectedNode];
+            } else if (transitionPairs[tStartNode.id] && nodes[transitionPairs[tStartNode.id]] && nodes[transitionPairs[tStartNode.id]].floor === toFloor) {
+                closestEndNode = nodes[transitionPairs[tStartNode.id]];
+            } else {
+                let minDistance = Infinity;
+                matchingEnds.forEach(tEndNode => {
+                    const dx = tStartNode.x - tEndNode.x;
+                    const dy = tStartNode.y - tEndNode.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        closestEndNode = tEndNode;
+                    }
+                });
+            }
             
             if (!closestEndNode) return;
             
@@ -1066,8 +1092,9 @@
             localStorage.setItem('ind_local_start_id', 'n_cong');
         }
         
-        if (localStartId && nodes[localStartId]) {
-            const startLabel = nodes[localStartId].label.toUpperCase();
+        const activeStartNodeId = navigationActive ? navigationCurrentNodeId : localStartId;
+        if (activeStartNodeId && nodes[activeStartNodeId]) {
+            const startLabel = nodes[activeStartNodeId].label.toUpperCase();
             searchInput.value = startLabel;
             sidebarStartInput.value = startLabel;
             
@@ -1319,7 +1346,7 @@
                 if (isNavStart || isNavEnd || isUserCurrentVirtualLoc || isTransitionStart) {
                     showThisNode = true;
                     showLabel = true;
-                } else if (isPartOfRoute && (node.type === 'stairs' || node.type === 'elevator' || node.customIcon)) {
+                } else if (isPartOfRoute && (node.type === 'stairs' || node.type === 'elevator' || node.type === 'transition' || node.customIcon)) {
                     showThisNode = true;
                     showLabel = true;
                 }
@@ -1355,15 +1382,16 @@
             else if (node.type === 'office') color = 'cat-office';
             else if (node.type === 'service') color = 'cat-service';
             else if (node.type === 'emergency') color = 'cat-emergency';
+            else if (node.type === 'transition') color = 'bg-indigo-600';
 
             if (isUserCurrentVirtualLoc || isNavStart) color = 'bg-emerald-500 ring-4 ring-emerald-100';
             if (isNavEnd) color = 'bg-orange-500 ring-4 ring-orange-100 animate-bounce';
             if (isTransitionStart) color = 'bg-indigo-600 ring-4 ring-indigo-200 animate-pulse'; // Phát sáng sóng chuyển tiếp
 
             // Tăng nhẹ kích thước các mút bấm tương tác trên Mobile cho dễ chạm ngón tay (tối đa size 28px)
-            let size = (isUserCurrentVirtualLoc || isNavStart) || isNavEnd || isTransitionStart ? 28 : (isPartOfRoute && (node.type === 'stairs' || node.type === 'elevator') ? 24 : (scale >= 1.6 ? 16 : 12));
+            let size = (isUserCurrentVirtualLoc || isNavStart) || isNavEnd || isTransitionStart ? 28 : (isPartOfRoute && (node.type === 'stairs' || node.type === 'elevator' || node.type === 'transition') ? 24 : (scale >= 1.6 ? 16 : 12));
             
-            let displayIcon = node.customIcon || "📍";
+            let displayIcon = node.customIcon || (node.type === 'transition' ? "🪜" : "📍");
             if (isUserCurrentVirtualLoc || isNavStart) displayIcon = "🚶";
             if (isNavEnd) displayIcon = "🎯";
             if (isTransitionStart) displayIcon = "🪜"; // Cầu thang nhấp nháy chuyển tiếp
@@ -1530,14 +1558,32 @@
         
         // Hiển thị thông tin chặng di chuyển hiện tại cho sinh động
         let stepProgressText = "";
+        let sidebarStatusText = "";
         if (navigationActive && floorSequence.length > 1) {
             const currentNavNode = nodes[navigationCurrentNodeId];
             const currentFloorIdx = floorSequence.indexOf(currentNavNode?.floor);
             if (currentFloorIdx !== -1) {
-                stepProgressText = `Chặng ${currentFloorIdx + 1}/${floorSequence.length}: `;
+                const totalStages = floorSequence.length;
+                const currentStage = currentFloorIdx + 1;
+                if (currentStage < totalStages) {
+                    const transName = nodes[crossFloorRouting?.transitionStartId]?.label || "CẦU THANG";
+                    stepProgressText = `Chặng ${currentStage}/${totalStages}: `;
+                    sidebarStatusText = `Chặng ${currentStage}/${totalStages}: Đến cầu thang ${transName}`;
+                } else {
+                    stepProgressText = `Chặng ${currentStage}/${totalStages}: `;
+                    sidebarStatusText = `Chặng ${currentStage}/${totalStages}: Tiếp tục đến đích`;
+                }
             }
         }
         document.getElementById('route-summary-steps').innerText = `${stepProgressText}~${steps} bước`;
+
+        // Cập nhật trạng thái chỉ đường lên Sidebar
+        if (sidebarStatusText) {
+            sidebarRouteStatus.classList.remove('hidden');
+            sidebarRouteStatus.innerText = sidebarStatusText.toUpperCase();
+        } else {
+            sidebarRouteStatus.classList.add('hidden');
+        }
 
         const fastSwitchBtn = document.getElementById('btn-route-switch-floor-fast');
         if (crossFloorRouting) {
@@ -1568,7 +1614,19 @@
             p.classList.remove('hidden');
             const targetFloor = floors.find(f => f.id === crossFloorRouting.endFloor);
             const stairsName = nodes[crossFloorRouting.transitionStartId]?.label || "CẦU THANG";
-            document.getElementById('prompt-text').innerText = `TIẾP THEO: LÊN ${targetFloor.name.toUpperCase()} QUA [${stairsName}]`;
+            
+            // Tính số bước còn lại cho chặng tiếp theo
+            let remainingSteps = 68;
+            const nextStagePath = findShortestPath(crossFloorRouting.transitionEndId, localEndId);
+            if (nextStagePath) {
+                remainingSteps = Math.round(nextStagePath.length * 12);
+            }
+
+            document.getElementById('prompt-text').innerHTML = `
+                <span class="block font-black text-slate-800 text-[10px]">📍 Bạn đã đến cầu thang: ${stairsName}</span>
+                <span class="block text-[9px] text-indigo-600 font-bold">⬆️ Tiếp tục lên ${targetFloor.name.toUpperCase()} (Đích đến còn cách ~${remainingSteps} bước)</span>
+            `;
+
             document.getElementById('btn-switch-floor').onclick = () => {
                 window.changeFloor(crossFloorRouting.endFloor);
                 
@@ -1632,12 +1690,17 @@
                 
                 // Phóng to tại đúng tâm điểm ngón tay vừa chạm đúp
                 const nS = 2.0;
-                const mX = (tX - view.x) / view.scale;
-                const mY = (tY - view.y) / view.scale;
                 
+                const R = view.rotation * Math.PI / 180;
+                const dx = (tX - view.x) / view.scale;
+                const dy = (tY - view.y) / view.scale;
+                const mapX = dx * Math.cos(R) + dy * Math.sin(R);
+                const mapY = -dx * Math.sin(R) + dy * Math.cos(R);
+
                 view.scale = nS;
-                view.x = tX - mX * nS;
-                view.y = tY - mY * nS;
+                view.x = tX - nS * (mapX * Math.cos(R) - mapY * Math.sin(R));
+                view.y = tY - nS * (mapX * Math.sin(R) + mapY * Math.cos(R));
+                
                 applyTransform(true); // Animation zoom mượt
                 renderNodes();
             }
@@ -1690,8 +1753,15 @@
             const sidebarWidth = (window.innerWidth >= 1024 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
             const visibleWidth = vW - sidebarWidth;
 
-            const minScaleX = (visibleWidth * 0.4) / MAP_WIDTH; 
-            const minScaleY = (vH * 0.4) / MAP_HEIGHT;
+            // Compute rotated bounding box
+            const rad = view.rotation * Math.PI / 180;
+            const cos = Math.abs(Math.cos(rad));
+            const sin = Math.abs(Math.sin(rad));
+            const rotatedW = MAP_WIDTH * cos + MAP_HEIGHT * sin;
+            const rotatedH = MAP_WIDTH * sin + MAP_HEIGHT * cos;
+
+            const minScaleX = (visibleWidth * 0.4) / rotatedW; 
+            const minScaleY = (vH * 0.4) / rotatedH;
             const minScale = Math.max(Math.min(minScaleX, minScaleY), 0.12);
 
             let nS = initScale * delta;
@@ -1706,7 +1776,7 @@
             view.x = midX - nS * (initMapX * Math.cos(R) - initMapY * Math.sin(R));
             view.y = midY - nS * (initMapX * Math.sin(R) + initMapY * Math.cos(R));
 
-            applyTransform(); // Vuốt thu phóng tức thời cực mượt
+            applyTransform(); // Vuốt thu phóng tức thời cực mượt (no clamp during active movement)
             renderNodes();
         }
     }, { passive: false });
@@ -1867,6 +1937,7 @@
         navigationCurrentNodeId = null;
         navigationTargetNodeId = null;
         floorSequence = [];
+        sidebarRouteStatus.classList.add('hidden'); // Ẩn trạng thái chặng
         
         buildQrLocationSelector();
         hideRouteSummaryUI();
@@ -1883,6 +1954,24 @@
             const t = btn.id.replace('btn-type-', '');
             btn.className = `type-opt p-2 border rounded-lg text-[9px] font-black text-left transition-all ${node.type === t ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white text-slate-400 border-slate-200'}`;
         });
+
+        // Ẩn/Hiện phần cấu hình liên kết cầu thang đa tầng
+        const transLinkDiv = document.getElementById('props-panel-transition-link');
+        if (node.type === 'transition') {
+            transLinkDiv.classList.remove('hidden');
+            const selectEl = document.getElementById('node-connected-select');
+            
+            // Lấy danh sách các node trung chuyển khác tầng của trường
+            let optionsHtml = '<option value="">-- CHỌN NODE LIÊN KẾT --</option>';
+            Object.values(nodes).filter(n => n.id !== node.id && (n.type === 'transition' || n.type === 'stairs' || n.type === 'elevator')).forEach(n => {
+                const fObj = floors.find(f => f.id === n.floor) || { name: n.floor };
+                optionsHtml += `<option value="${n.id}">${n.label || n.id} (${fObj.name})</option>`;
+            });
+            selectEl.innerHTML = optionsHtml;
+            selectEl.value = node.connectedNode || "";
+        } else {
+            transLinkDiv.classList.add('hidden');
+        }
 
         document.querySelectorAll('.icon-opt').forEach(btn => {
             const icon = btn.dataset.icon;
@@ -1912,6 +2001,13 @@
     };
     document.getElementById('node-dept-input').onchange = (e) => {
         if(selectedId) {
+            saveData(true);
+        }
+    };
+
+    document.getElementById('node-connected-select').onchange = (e) => {
+        if (selectedId) {
+            nodes[selectedId].connectedNode = e.target.value;
             saveData(true);
         }
     };
