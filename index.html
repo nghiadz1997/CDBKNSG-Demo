@@ -206,8 +206,11 @@
     </aside>
 
     <main id="viewport" class="flex-1 bg-slate-100 relative">
-        <!-- Nút xoay và gần lại -->
+        <!-- Nút xoay, khóa và gần lại -->
         <div class="absolute right-4 top-20 lg:top-4 z-[140] flex flex-col gap-2">
+            <button id="btn-lock-rotation" class="p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform" title="Khóa/Mở khóa xoay bản đồ">
+                <span id="lock-rotation-icon">🔓</span>
+            </button>
             <button id="btn-rotate" class="p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform" title="Xoay sơ đồ 90°">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
             </button>
@@ -356,8 +359,8 @@
     // CƠ SỞ DỮ LIỆU ĐƯỢC CHIA SẺ TRÊN FIREBASE
     let nodes = {}, edges = [];
     
-    // TRẠNG THÁI KHÁCH HÀNG CỤC BỘ CÔ LẬP
-    let localStartId = localStorage.getItem('ind_local_start_id') || 'n_cong';
+    // TRẠNG THÁI KHÁCH HÀNG CỤC BỘ CÔ LẬP (Mặc định bắt đầu là n_hcm thay vì n_cong)
+    let localStartId = 'n_hcm';
     let localEndId = null;
     let route = [];
     let crossFloorRouting = null;
@@ -384,6 +387,9 @@
     let initMapX = 0;
     let initMapY = 0;
     let isPinching = false;
+
+    // Khởi tạo trạng thái Khóa xoay bản đồ mặc định
+    let isRotationLocked = false;
 
     const floors = [
         { id: 'A-G', area: 'Khu A', name: 'Tầng Trệt', image: 'img/map.png' },
@@ -462,7 +468,7 @@
 
     function getFallbackData() {
         const fallbackNodes = {
-            "n_cong": { id: "n_cong", x: 230, y: 780, label: "CỔNG CHÍNH", type: "service", customIcon: "🚪", floor: "A-G", connections: ["w1"] },
+            "n_hcm": { id: "n_hcm", x: 230, y: 780, label: "CỔNG CHÍNH (HCM)", type: "service", customIcon: "🚪", floor: "A-G", connections: ["w1"] },
             "n_baixe": { id: "n_baixe", x: 150, y: 480, label: "BÃI XE KHU A", type: "service", customIcon: "🅿", floor: "A-G", connections: ["w4"] },
             "n_cantin": { id: "n_cantin", x: 600, y: 620, label: "CĂN TIN TRỆT", type: "service", customIcon: "☕", floor: "A-G", connections: ["w5"] },
             "n_toilet": { id: "n_toilet", x: 250, y: 380, label: "NHÀ VỆ SINH TRỆT", type: "service", customIcon: "🚻", floor: "A-G", connections: ["w3"] },
@@ -477,7 +483,7 @@
             "n_hoitruongA": { id: "n_hoitruongA", x: 620, y: 280, label: "HỘI TRƯỜNG A", type: "classroom", customIcon: "👑", floor: "A-1", connections: ["w12"] },
             "n_phong102": { id: "n_phong102", x: 200, y: 280, label: "PHÒNG A1.02", type: "classroom", customIcon: "", floor: "A-1", connections: ["w11"] },
 
-            "w1": { id: "w1", x: 230, y: 680, label: "", type: "waypoint", customIcon: "", floor: "A-G", connections: ["n_cong", "w4"] },
+            "w1": { id: "w1", x: 230, y: 680, label: "", type: "waypoint", customIcon: "", floor: "A-G", connections: ["n_hcm", "w4"] },
             "w2": { id: "w2", x: 200, y: 410, label: "", type: "waypoint", customIcon: "", floor: "A-G", connections: ["n_a011", "n_toilet"] },
             "w3": { id: "w3", x: 250, y: 410, label: "", type: "waypoint", customIcon: "", floor: "A-G", connections: ["n_toilet", "w4", "n_stairs_dong_G"] },
             "w4": { id: "w4", x: 200, y: 480, label: "", type: "waypoint", customIcon: "", floor: "A-G", connections: ["n_baixe", "w1", "w3", "w5"] },
@@ -488,13 +494,26 @@
         };
 
         const fallbackEdges = [
-            ["n_cong", "w1"], ["w1", "w4"], ["n_baixe", "w4"], ["w4", "w5"], ["w5", "n_cantin"],
+            ["n_hcm", "w1"], ["w1", "w4"], ["n_baixe", "w4"], ["w4", "w5"], ["w5", "n_cantin"],
             ["w5", "n_stairs_dong_G"], ["w5", "n_stairs_tay_G"], ["n_toilet", "w2"], ["n_toilet", "w3"], 
             ["w3", "w4"], ["w3", "n_stairs_dong_G"],
             ["n_stairs_dong_1", "w11"], ["n_stairs_tay_1", "w12"], ["w11", "n_phong102"], ["w11", "w12"], ["w12", "n_hoitruongA"]
         ];
 
         return { fallbackNodes, fallbackEdges };
+    }
+
+    // ĐỘC LẬP TỪNG TAB: Quản lý góc xoay và trạng thái khóa theo currentFloorId
+    function loadFloorRotationState() {
+        isRotationLocked = localStorage.getItem('ind_rotation_locked_' + currentFloorId) === 'true';
+        if (isRotationLocked) {
+            const savedRotation = localStorage.getItem('ind_locked_rotation_angle_' + currentFloorId);
+            view.rotation = savedRotation !== null ? (parseInt(savedRotation, 10) || 0) : 0;
+        } else {
+            const savedUnlockedRotation = localStorage.getItem('ind_unlocked_rotation_angle_' + currentFloorId);
+            view.rotation = savedUnlockedRotation !== null ? (parseInt(savedUnlockedRotation, 10) || 0) : 0;
+        }
+        updateRotationLockUI();
     }
 
     async function initCloudSync() {
@@ -534,12 +553,26 @@
                             edges = fallbackEdges;
                             saveData(true);
                         }
+
+                        // KHÓA ĐẢM BẢO: Tự động khởi tạo vị trí HCM nếu chưa tồn tại trên database cloud
+                        if (!nodes["n_hcm"]) {
+                            nodes["n_hcm"] = { id: "n_hcm", x: 230, y: 780, label: "CỔNG CHÍNH (HCM)", type: "service", customIcon: "🚪", floor: "A-G", connections: ["w1"] };
+                            if (nodes["w1"]) {
+                                if (!nodes["w1"].connections) nodes["w1"].connections = [];
+                                if (!nodes["w1"].connections.includes("n_hcm")) nodes["w1"].connections.push("n_hcm");
+                            }
+                            const hasEdge = edges.some(e => (e[0] === 'n_hcm' && e[1] === 'w1') || (e[0] === 'w1' && e[1] === 'n_hcm'));
+                            if (!hasEdge) {
+                                edges.push(["n_hcm", "w1"]);
+                            }
+                        }
                         
                         if (nodes[localStartId]) {
                             currentFloorId = nodes[localStartId].floor;
                         }
 
                         sanitizeConnections();
+                        loadFloorRotationState();
                         updateUI();
                         buildQrLocationSelector();
                         
@@ -657,8 +690,6 @@
         }
     }
 
-    // TỐI ƯU HÓA HOÀN HẢO THUẬT TOÁN TÌM CẦU THANG: 
-    // Cho phép kết nối trực tiếp (explicit connection) vượt qua rào cản khu vực nếu Admin cấu hình nối trực tiếp.
     function findBestTransition(fromFloor, toFloor, fromNodeId, finalDestNodeId) {
         const startNode = nodes[fromNodeId];
         if (!startNode) return null;
@@ -678,11 +709,9 @@
         candidates.forEach(tStartNode => {
             let closestEndNode = null;
             
-            // 1. Kiểm tra liên kết thủ công trước (Bypass mọi giới hạn về khu vực để cho phép Admin tự do cấu hình cầu thang)
             if (tStartNode.connectedNode && nodes[tStartNode.connectedNode] && nodes[tStartNode.connectedNode].floor === toFloor) {
                 closestEndNode = nodes[tStartNode.connectedNode];
             } 
-            // 2. Chế độ Fallback tự động tìm cầu thang gần nhất theo toạ độ khi hai lầu CÙNG KHU VỰC
             else if (fromArea === toArea) {
                 const matchingEnds = Object.values(nodes).filter(n => 
                     n.floor === toFloor && 
@@ -760,6 +789,7 @@
 
         if (currentFloorId !== navFloor) {
             currentFloorId = navFloor;
+            loadFloorRotationState();
             updateUI(); 
             return; 
         }
@@ -1071,13 +1101,14 @@
 
     window.changeFloor = (id) => { 
         currentFloorId = id; 
+        loadFloorRotationState(); // Tải góc xoay & khóa của tầng được đổi
         updateUI(); 
     };
 
     function buildQrLocationSelector() {
-        if (!localStartId && nodes["n_cong"]) {
-            localStartId = "n_cong";
-            localStorage.setItem('ind_local_start_id', 'n_cong');
+        if (!localStartId && nodes["n_hcm"]) {
+            localStartId = "n_hcm";
+            localStorage.setItem('ind_local_start_id', 'n_hcm');
         }
         
         const activeStartNodeId = navigationActive ? navigationCurrentNodeId : localStartId;
@@ -1154,6 +1185,7 @@
                         
                         showMsg("Đã đặt vị trí hiện tại: " + n.label.toUpperCase());
                         currentFloorId = n.floor;
+                        loadFloorRotationState(); // Đảm bảo tải lại góc xoay khi định vị
                         
                         if (localEndId && localEndId !== n.id) {
                             updateRouteAndUI();
@@ -1170,8 +1202,8 @@
                         navigationActive = false; 
                         
                         if (!localStartId) {
-                            localStartId = "n_cong";
-                            localStorage.setItem('ind_local_start_id', 'n_cong');
+                            localStartId = "n_hcm";
+                            localStorage.setItem('ind_local_start_id', 'n_hcm');
                         }
 
                         showMsg("Đang vẽ tuyến đường đến: " + n.label.toUpperCase());
@@ -1749,6 +1781,11 @@
     viewport.addEventListener('touchcancel', handleEnd);
 
     function rotateAroundViewportCenter(degrees) {
+        if (isRotationLocked) {
+            showMsg("Xoay bản đồ đang bị khóa!", false);
+            return;
+        }
+
         const vW = viewport.clientWidth || window.innerWidth;
         const vH = viewport.clientHeight || window.innerHeight;
         const sidebarWidth = (window.innerWidth >= 1024 && !sidebar.classList.contains('-translate-x-full')) ? sidebar.clientWidth : 0;
@@ -1769,8 +1806,41 @@
         view.x = vcX - view.scale * (mapX * Math.cos(R2) - mapY * Math.sin(R2));
         view.y = vcY - view.scale * (mapX * Math.sin(R2) + mapY * Math.cos(R2));
 
+        // Lưu góc xoay không khóa cho riêng tầng này
+        localStorage.setItem('ind_unlocked_rotation_angle_' + currentFloorId, view.rotation);
+
         applyTransform(true); 
         renderNodes();
+    }
+
+    // ĐỘC LẬP TỪNG TAB: Thiết lập khóa xoay cho từng tầng riêng biệt
+    function toggleRotationLock() {
+        isRotationLocked = !isRotationLocked;
+        localStorage.setItem('ind_rotation_locked_' + currentFloorId, isRotationLocked);
+        updateRotationLockUI();
+        
+        const floorObj = floors.find(f => f.id === currentFloorId);
+        const floorName = floorObj ? `${floorObj.area} - ${floorObj.name}` : currentFloorId;
+
+        if (isRotationLocked) {
+            // Khóa cố định tại góc xoay hiện tại theo ý người dùng và lưu trữ lại riêng tầng này
+            localStorage.setItem('ind_locked_rotation_angle_' + currentFloorId, view.rotation);
+            showMsg(`Đã KHÓA xoay bản đồ sơ đồ [${floorName}] tại góc hiện tại (${view.rotation}°)`);
+        } else {
+            showMsg(`Đã MỞ KHÓA xoay bản đồ sơ đồ [${floorName}]`);
+        }
+    }
+
+    function updateRotationLockUI() {
+        const btn = document.getElementById('btn-lock-rotation');
+        const icon = document.getElementById('lock-rotation-icon');
+        if (isRotationLocked) {
+            btn.className = "p-3 bg-indigo-600 shadow-lg rounded-xl border border-indigo-700 text-white active:scale-90 transition-transform";
+            icon.innerText = "🔒";
+        } else {
+            btn.className = "p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform";
+            icon.innerText = "🔓";
+        }
     }
 
     document.querySelectorAll('.quick-action-btn').forEach(btn => {
@@ -1781,12 +1851,13 @@
             if(availableNodes.length > 0) {
                 let target = availableNodes.find(n => n.floor === currentFloorId) || availableNodes[0];
                 currentFloorId = target.floor;
+                loadFloorRotationState(); // Tải cấu hình xoay của tầng mới
                 localEndId = target.id;
                 navigationActive = false;
                 
                 if (!localStartId) {
-                    localStartId = "n_cong";
-                    localStorage.setItem('ind_local_start_id', 'n_cong');
+                    localStartId = "n_hcm";
+                    localStorage.setItem('ind_local_start_id', 'n_hcm');
                 }
                 
                 updateUI();
@@ -1811,6 +1882,10 @@
         rotateAroundViewportCenter(90);
     };
 
+    document.getElementById('btn-lock-rotation').onclick = () => {
+        toggleRotationLock();
+    };
+
     document.getElementById('qr-mock-btn').onclick = () => {
         const locationNodes = Object.values(nodes).filter(n => {
             if (!n || !n.label || n.type === 'waypoint') return false;
@@ -1825,6 +1900,7 @@
             buildQrLocationSelector();
             
             currentFloorId = randomNode.floor;
+            loadFloorRotationState(); // Tải góc xoay riêng cho tầng mới check-in
             updateUI();
             focusSingleNode(randomNode);
             showMsg(`📲 Đã check-in thành công vị trí tại: [${randomNode.label.toUpperCase()}]`);
@@ -1863,7 +1939,7 @@
             isAdmin = true; loginModal.classList.add('hidden');
             document.getElementById('admin-tools').classList.remove('hidden'); updateUI();
             showMsg("Đã kích hoạt chế độ nhà phát triển!");
-        } else alert("Mật khẩu truy cập không chính xác!");
+        } else showMsg("Mật khẩu truy cập không chính xác!", false);
     };
     document.getElementById('btn-login-cancel').onclick = () => loginModal.classList.add('hidden');
     document.getElementById('btn-logout').onclick = () => { isAdmin = false; location.reload(); };
@@ -1887,6 +1963,10 @@
         navigationTargetNodeId = null;
         floorSequence = [];
         sidebarRouteStatus.classList.add('hidden'); 
+        
+        // CẬP NHẬT MỚI: Lập tức quay về bản đồ Khu A Tầng Trệt ('A-G')
+        currentFloorId = 'A-G';
+        loadFloorRotationState(); // Nạp cấu hình xoay & trạng thái khóa của Khu A Tầng Trệt
         
         buildQrLocationSelector();
         hideRouteSummaryUI();
@@ -1999,6 +2079,7 @@
 
     window.onload = () => {
         initCloudSync(); 
+        loadFloorRotationState(); // Nạp cấu hình xoay/khóa của tầng hiện tại khi mới mở trang
         setupInitialView();
         mapImage.onload = () => setupInitialView();
         window.onresize = () => {
