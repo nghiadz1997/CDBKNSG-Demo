@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>SƠ ĐỒ NỘI BỘ TRƯỜNG CĐBK NAM SÀI GÒN</title>
+    <title>TRƯỜNG CAO ĐẲNG BÁCH KHOA NAM SÀI GÒN</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes dash { to { stroke-dashoffset: -40; } }
@@ -127,7 +127,7 @@
     <aside id="main-sidebar" class="sidebar-panel fixed inset-y-0 left-0 w-80 md:w-80 bg-white border-r border-slate-200 flex flex-col shadow-2xl -translate-x-full lg:translate-x-0 lg:static lg:z-10">
         <div class="p-5 border-b border-slate-100 bg-gradient-to-br from-indigo-700 to-violet-900 text-white flex justify-between items-center">
             <div>
-                <h1 class="font-bold text-base leading-tight">SƠ ĐỒ NỘI BỘ</h1>
+                <h1 class="font-bold text-base leading-tight">GOOGLE MAPS NỘI BỘ</h1>
                 <p class="text-[9px] opacity-70 uppercase tracking-widest text-orange-300 font-bold">TRƯỜNG CAO ĐẲNG BÁCH KHOA NAM SÀI GÒN</p>
             </div>
             <button id="close-sidebar-btn" class="p-1.5 text-white/60 hover:text-white rounded-lg hover:bg-white/10 lg:hidden">
@@ -358,6 +358,7 @@
     
     // CƠ SỞ DỮ LIỆU ĐƯỢC CHIA SẺ TRÊN FIREBASE
     let nodes = {}, edges = [];
+    let floorRotations = {}; // Bản đồ lưu trữ góc xoay thực tế của từng tầng đồng bộ qua Cloud
     
     // TRẠNG THÁI KHÁCH HÀNG CỤC BỘ CÔ LẬP
     let localStartId = 'n_hcm';
@@ -505,19 +506,21 @@
 
     // ĐỘC LẬP TỪNG TAB: Quản lý góc xoay và trạng thái khóa theo currentFloorId
     function loadFloorRotationState() {
-        // CẬP NHẬT: Ép buộc khóa xoay (rotation locked) đối với mọi tài khoản không phải Admin
+        // Ưu tiên nạp góc xoay đã được lưu từ Firestore (mã hóa theo từng Tầng)
+        const cloudRotation = floorRotations[currentFloorId];
+        if (cloudRotation !== undefined && cloudRotation !== null) {
+            view.rotation = parseInt(cloudRotation, 10) || 0;
+        } else {
+            // Dự phòng từ LocalStorage cục bộ nếu Cloud chưa có cấu hình xoay
+            const savedRotation = localStorage.getItem('ind_locked_rotation_angle_' + currentFloorId);
+            view.rotation = savedRotation !== null ? (parseInt(savedRotation, 10) || 0) : 0;
+        }
+
+        // Cập nhật trạng thái Khóa xoay bản đồ (Bản đồ luôn bị khóa đối với người dùng thông thường)
         if (isAdmin) {
             isRotationLocked = localStorage.getItem('ind_rotation_locked_' + currentFloorId) === 'true';
         } else {
-            isRotationLocked = true; // User thông thường luôn bị khóa xoay
-        }
-
-        if (isRotationLocked) {
-            const savedRotation = localStorage.getItem('ind_locked_rotation_angle_' + currentFloorId);
-            view.rotation = savedRotation !== null ? (parseInt(savedRotation, 10) || 0) : 0;
-        } else {
-            const savedUnlockedRotation = localStorage.getItem('ind_unlocked_rotation_angle_' + currentFloorId);
-            view.rotation = savedUnlockedRotation !== null ? (parseInt(savedUnlockedRotation, 10) || 0) : 0;
+            isRotationLocked = true; // Ép khóa cứng để người dùng thường không quay lệch hướng
         }
         updateRotationLockUI();
     }
@@ -553,10 +556,14 @@
                             try {
                                 edges = typeof data.edges === 'string' ? JSON.parse(data.edges) : (data.edges || []);
                             } catch (e) { edges = []; }
+
+                            // Đồng bộ góc xoay toàn hệ thống từ Firestore Cloud
+                            floorRotations = data.floorRotations || {};
                         } else {
                             const { fallbackNodes, fallbackEdges } = getFallbackData();
                             nodes = fallbackNodes;
                             edges = fallbackEdges;
+                            floorRotations = {};
                             saveData(true);
                         }
 
@@ -617,7 +624,12 @@
         syncStatus.className = 'w-2 h-2 rounded-full bg-blue-500 animate-pulse';
         syncText.innerText = 'Saving';
         try {
-            const dataToSave = { nodes, edges: JSON.stringify(edges), rotation: view.rotation };
+            // Đẩy cả nodes, edges và danh sách góc xoay các tầng lên Cloud Firestore
+            const dataToSave = { 
+                nodes, 
+                edges: JSON.stringify(edges), 
+                floorRotations: floorRotations 
+            };
             await setDoc(stateDocRef, dataToSave);
             if (!silent) showMsg("Đã đồng bộ sơ đồ thành công!");
             syncStatus.className = 'w-2 h-2 rounded-full bg-green-500';
@@ -1100,7 +1112,7 @@
             mapImage.src = currentFloor.image;
         }
 
-        // CẬP NHẬT: Quản lý ẩn hiện nút xoay & khóa dựa trên quyền Admin
+        // Quản lý ẩn hiện nút xoay & khóa dựa trên quyền Admin
         if (isAdmin) {
             document.getElementById('btn-lock-rotation').classList.remove('hidden');
             document.getElementById('btn-rotate').classList.remove('hidden');
@@ -1796,7 +1808,7 @@
     viewport.addEventListener('touchcancel', handleEnd);
 
     function rotateAroundViewportCenter(degrees) {
-        // CẬP NHẬT: Ngăn người dùng không có quyền Admin xoay bản đồ
+        // Ngăn chặn hành động nếu không phải là Admin đăng nhập
         if (!isAdmin) {
             showMsg("Hành động bị từ chối: Quyền cấu hình xoay thuộc về Admin!", false);
             return;
@@ -1827,8 +1839,13 @@
         view.x = vcX - view.scale * (mapX * Math.cos(R2) - mapY * Math.sin(R2));
         view.y = vcY - view.scale * (mapX * Math.sin(R2) + mapY * Math.cos(R2));
 
-        // Lưu góc xoay không khóa cho riêng tầng này
+        // Lưu góc xoay vào đối tượng toàn cục liên kết với Cloud và LocalStorage
+        floorRotations[currentFloorId] = view.rotation;
+        localStorage.setItem('ind_locked_rotation_angle_' + currentFloorId, view.rotation);
         localStorage.setItem('ind_unlocked_rotation_angle_' + currentFloorId, view.rotation);
+
+        // Gọi đồng bộ ngầm (silent) lên Cloud Firestore ngay lập tức để người dùng khác cập nhật theo
+        saveData(true);
 
         applyTransform(true); 
         renderNodes();
@@ -1836,7 +1853,6 @@
 
     // ĐỘC LẬP TỪNG TAB: Thiết lập khóa xoay cho từng tầng riêng biệt
     function toggleRotationLock() {
-        // CẬP NHẬT: Ngăn chặn người dùng thay đổi trạng thái khóa
         if (!isAdmin) {
             showMsg("Bạn không có quyền mở/khóa xoay bản đồ sơ đồ!", false);
             return;
@@ -1850,8 +1866,10 @@
         const floorName = floorObj ? `${floorObj.area} - ${floorObj.name}` : currentFloorId;
 
         if (isRotationLocked) {
-            // Khóa cố định tại góc xoay hiện tại theo ý người dùng và lưu trữ lại riêng tầng này
             localStorage.setItem('ind_locked_rotation_angle_' + currentFloorId, view.rotation);
+            floorRotations[currentFloorId] = view.rotation;
+            // Lưu góc khóa lên Firebase Cloud để áp dụng đồng loạt cho mọi user tải lại trang
+            saveData(true);
             showMsg(`Đã KHÓA xoay sơ đồ [${floorName}] tại góc hiện tại (${view.rotation}°)`);
         } else {
             showMsg(`Đã MỞ KHÓA xoay sơ đồ [${floorName}]`);
@@ -1869,7 +1887,7 @@
             icon.innerText = "🔓";
         }
         
-        // CẬP NHẬT: Luôn giữ ẩn nếu không phải là Admin
+        // Chỉ Admin mới được hiển thị nút thay đổi trạng thái khóa/mở khóa xoay
         if (!isAdmin) btn.classList.add('hidden');
     }
 
@@ -1881,7 +1899,7 @@
             if(availableNodes.length > 0) {
                 let target = availableNodes.find(n => n.floor === currentFloorId) || availableNodes[0];
                 currentFloorId = target.floor;
-                loadFloorRotationState(); // Tải cấu hình xoay của tầng mới
+                loadFloorRotationState(); // Tải góc xoay của tầng mới từ Cloud
                 localEndId = target.id;
                 navigationActive = false;
                 
@@ -1969,11 +1987,11 @@
             isAdmin = true; loginModal.classList.add('hidden');
             document.getElementById('admin-tools').classList.remove('hidden'); 
             
-            // CẬP NHẬT: Hiển thị lại các nút xoay & khóa cho Admin
+            // Hiển thị lại các nút xoay & khóa cấu hình cho Admin
             document.getElementById('btn-lock-rotation').classList.remove('hidden');
             document.getElementById('btn-rotate').classList.remove('hidden');
 
-            loadFloorRotationState(); // Nạp lại cấu hình thực tế
+            loadFloorRotationState(); // Nạp lại cấu hình thực tế từ Cloud
             updateUI();
             showMsg("Đã kích hoạt chế độ nhà phát triển!");
         } else showMsg("Mật khẩu truy cập không chính xác!", false);
@@ -2001,7 +2019,7 @@
         floorSequence = [];
         sidebarRouteStatus.classList.add('hidden'); 
         
-        // CẬP NHẬT MỚI: Lập tức quay về bản đồ Khu A Tầng Trệt ('A-G')
+        // Lập tức quay về bản đồ Khu A Tầng Trệt ('A-G')
         currentFloorId = 'A-G';
         loadFloorRotationState(); // Nạp cấu hình xoay & trạng thái khóa của Khu A Tầng Trệt
         
