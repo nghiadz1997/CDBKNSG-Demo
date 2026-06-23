@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>Indoor Nav PRO - Advanced Smart Navigation</title>
+    <title>SƠ ĐỒ NỘI BỘ TRƯỜNG CĐBK NAM SÀI GÒN</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes dash { to { stroke-dashoffset: -40; } }
@@ -127,8 +127,8 @@
     <aside id="main-sidebar" class="sidebar-panel fixed inset-y-0 left-0 w-80 md:w-80 bg-white border-r border-slate-200 flex flex-col shadow-2xl -translate-x-full lg:translate-x-0 lg:static lg:z-10">
         <div class="p-5 border-b border-slate-100 bg-gradient-to-br from-indigo-700 to-violet-900 text-white flex justify-between items-center">
             <div>
-                <h1 class="font-bold text-base leading-tight">Indoor Nav PRO</h1>
-                <p class="text-[9px] opacity-70 uppercase tracking-widest text-orange-300 font-bold">Advanced Smart Core v8.15</p>
+                <h1 class="font-bold text-base leading-tight">SƠ ĐỒ NỘI BỘ</h1>
+                <p class="text-[9px] opacity-70 uppercase tracking-widest text-orange-300 font-bold">TRƯỜNG CAO ĐẲNG BÁCH KHOA NAM SÀI GÒN</p>
             </div>
             <button id="close-sidebar-btn" class="p-1.5 text-white/60 hover:text-white rounded-lg hover:bg-white/10 lg:hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -206,12 +206,12 @@
     </aside>
 
     <main id="viewport" class="flex-1 bg-slate-100 relative">
-        <!-- Nút xoay, khóa và gần lại -->
+        <!-- Nút xoay, khóa và gần lại (Mặc định ẩn nút xoay và khóa với user thông thường bằng class 'hidden') -->
         <div class="absolute right-4 top-20 lg:top-4 z-[140] flex flex-col gap-2">
-            <button id="btn-lock-rotation" class="p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform" title="Khóa/Mở khóa xoay bản đồ">
+            <button id="btn-lock-rotation" class="hidden p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform" title="Khóa/Mở khóa xoay bản đồ">
                 <span id="lock-rotation-icon">🔓</span>
             </button>
-            <button id="btn-rotate" class="p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform" title="Xoay sơ đồ 90°">
+            <button id="btn-rotate" class="hidden p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform" title="Xoay sơ đồ 90°">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
             </button>
             <button id="btn-recenter" class="p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform" title="Căn giữa sơ đồ">
@@ -359,7 +359,7 @@
     // CƠ SỞ DỮ LIỆU ĐƯỢC CHIA SẺ TRÊN FIREBASE
     let nodes = {}, edges = [];
     
-    // TRẠNG THÁI KHÁCH HÀNG CỤC BỘ CÔ LẬP (Mặc định bắt đầu là n_hcm thay vì n_cong)
+    // TRẠNG THÁI KHÁCH HÀNG CỤC BỘ CÔ LẬP
     let localStartId = 'n_hcm';
     let localEndId = null;
     let route = [];
@@ -505,7 +505,13 @@
 
     // ĐỘC LẬP TỪNG TAB: Quản lý góc xoay và trạng thái khóa theo currentFloorId
     function loadFloorRotationState() {
-        isRotationLocked = localStorage.getItem('ind_rotation_locked_' + currentFloorId) === 'true';
+        // CẬP NHẬT: Ép buộc khóa xoay (rotation locked) đối với mọi tài khoản không phải Admin
+        if (isAdmin) {
+            isRotationLocked = localStorage.getItem('ind_rotation_locked_' + currentFloorId) === 'true';
+        } else {
+            isRotationLocked = true; // User thông thường luôn bị khóa xoay
+        }
+
         if (isRotationLocked) {
             const savedRotation = localStorage.getItem('ind_locked_rotation_angle_' + currentFloorId);
             view.rotation = savedRotation !== null ? (parseInt(savedRotation, 10) || 0) : 0;
@@ -1092,6 +1098,15 @@
         const currentFloor = floors.find(x => x.id === currentFloorId);
         if (mapImage.getAttribute('src') !== currentFloor.image) {
             mapImage.src = currentFloor.image;
+        }
+
+        // CẬP NHẬT: Quản lý ẩn hiện nút xoay & khóa dựa trên quyền Admin
+        if (isAdmin) {
+            document.getElementById('btn-lock-rotation').classList.remove('hidden');
+            document.getElementById('btn-rotate').classList.remove('hidden');
+        } else {
+            document.getElementById('btn-lock-rotation').classList.add('hidden');
+            document.getElementById('btn-rotate').classList.add('hidden');
         }
 
         renderNodes(); 
@@ -1781,8 +1796,14 @@
     viewport.addEventListener('touchcancel', handleEnd);
 
     function rotateAroundViewportCenter(degrees) {
+        // CẬP NHẬT: Ngăn người dùng không có quyền Admin xoay bản đồ
+        if (!isAdmin) {
+            showMsg("Hành động bị từ chối: Quyền cấu hình xoay thuộc về Admin!", false);
+            return;
+        }
+
         if (isRotationLocked) {
-            showMsg("Xoay bản đồ đang bị khóa!", false);
+            showMsg("Xoay bản đồ đang bị khóa! Vui lòng mở khóa trước.", false);
             return;
         }
 
@@ -1815,6 +1836,12 @@
 
     // ĐỘC LẬP TỪNG TAB: Thiết lập khóa xoay cho từng tầng riêng biệt
     function toggleRotationLock() {
+        // CẬP NHẬT: Ngăn chặn người dùng thay đổi trạng thái khóa
+        if (!isAdmin) {
+            showMsg("Bạn không có quyền mở/khóa xoay bản đồ sơ đồ!", false);
+            return;
+        }
+
         isRotationLocked = !isRotationLocked;
         localStorage.setItem('ind_rotation_locked_' + currentFloorId, isRotationLocked);
         updateRotationLockUI();
@@ -1825,9 +1852,9 @@
         if (isRotationLocked) {
             // Khóa cố định tại góc xoay hiện tại theo ý người dùng và lưu trữ lại riêng tầng này
             localStorage.setItem('ind_locked_rotation_angle_' + currentFloorId, view.rotation);
-            showMsg(`Đã KHÓA xoay bản đồ sơ đồ [${floorName}] tại góc hiện tại (${view.rotation}°)`);
+            showMsg(`Đã KHÓA xoay sơ đồ [${floorName}] tại góc hiện tại (${view.rotation}°)`);
         } else {
-            showMsg(`Đã MỞ KHÓA xoay bản đồ sơ đồ [${floorName}]`);
+            showMsg(`Đã MỞ KHÓA xoay sơ đồ [${floorName}]`);
         }
     }
 
@@ -1841,6 +1868,9 @@
             btn.className = "p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform";
             icon.innerText = "🔓";
         }
+        
+        // CẬP NHẬT: Luôn giữ ẩn nếu không phải là Admin
+        if (!isAdmin) btn.classList.add('hidden');
     }
 
     document.querySelectorAll('.quick-action-btn').forEach(btn => {
@@ -1937,7 +1967,14 @@
     document.getElementById('btn-login-confirm').onclick = () => {
         if(document.getElementById('admin-password').value === 'Nsg@2026') {
             isAdmin = true; loginModal.classList.add('hidden');
-            document.getElementById('admin-tools').classList.remove('hidden'); updateUI();
+            document.getElementById('admin-tools').classList.remove('hidden'); 
+            
+            // CẬP NHẬT: Hiển thị lại các nút xoay & khóa cho Admin
+            document.getElementById('btn-lock-rotation').classList.remove('hidden');
+            document.getElementById('btn-rotate').classList.remove('hidden');
+
+            loadFloorRotationState(); // Nạp lại cấu hình thực tế
+            updateUI();
             showMsg("Đã kích hoạt chế độ nhà phát triển!");
         } else showMsg("Mật khẩu truy cập không chính xác!", false);
     };
