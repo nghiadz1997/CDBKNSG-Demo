@@ -206,7 +206,6 @@
     </aside>
 
     <main id="viewport" class="flex-1 bg-slate-100 relative">
-        <!-- Nút xoay, khóa và gần lại (Mặc định ẩn nút xoay và khóa với user thông thường bằng class 'hidden') -->
         <div class="absolute right-4 top-20 lg:top-4 z-[140] flex flex-col gap-2">
             <button id="btn-lock-rotation" class="hidden p-3 bg-white/95 shadow-lg rounded-xl border border-slate-100 text-slate-600 active:scale-90 transition-transform" title="Khóa/Mở khóa xoay bản đồ">
                 <span id="lock-rotation-icon">🔓</span>
@@ -260,14 +259,19 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
-            <div class="grid grid-cols-2 gap-2 mt-1">
+            <!-- BỘ 3 NÚT: XUẤT PHÁT, ĐẾN, VÀ COPY LINK -->
+            <div class="grid grid-cols-3 gap-2 mt-1">
                 <button id="btn-set-start" class="flex flex-col items-center justify-center py-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 hover:bg-emerald-500 hover:text-white transition-colors active:scale-95">
                     <span class="text-lg mb-0.5">📍</span>
-                    <span class="text-[9px] font-black uppercase tracking-wider">Xuất phát ở đây</span>
+                    <span class="text-[9px] font-black uppercase tracking-wider">Xuất phát</span>
                 </button>
                 <button id="btn-set-end" class="flex flex-col items-center justify-center py-2.5 bg-orange-50 text-orange-600 rounded-xl border border-orange-100 hover:bg-orange-500 hover:text-white transition-colors active:scale-95">
                     <span class="text-lg mb-0.5">🎯</span>
-                    <span class="text-[9px] font-black uppercase tracking-wider">Đi đến đây</span>
+                    <span class="text-[9px] font-black uppercase tracking-wider">Đi đến</span>
+                </button>
+                <button id="btn-copy-link" class="flex flex-col items-center justify-center py-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100 hover:bg-blue-500 hover:text-white transition-colors active:scale-95">
+                    <span class="text-lg mb-0.5">🔗</span>
+                    <span class="text-[9px] font-black uppercase tracking-wider">Link QR</span>
                 </button>
             </div>
         </div>
@@ -1563,7 +1567,6 @@
         focusSingleNode(node);
     }
 
-    // Xử lý logic 2 nút trong Node Info Card
     document.getElementById('btn-close-node-info').onclick = () => {
         document.getElementById('node-info-card').classList.add('hidden');
         activeNodeId = null;
@@ -1610,6 +1613,28 @@
         activeNodeId = null;
         updateRouteAndUI();
         showRouteSummaryUI(localEndId);
+    };
+
+    // ==========================================
+    // LOGIC NÚT COPY LINK TẠO QR ĐÃ ĐƯỢC THÊM
+    // ==========================================
+    document.getElementById('btn-copy-link').onclick = () => {
+        if(!activeNodeId) return;
+        
+        const currentBaseUrl = window.location.origin + window.location.pathname;
+        const qrLink = `${currentBaseUrl}?loc=${activeNodeId}`;
+        
+        navigator.clipboard.writeText(qrLink).then(() => {
+            showMsg(`🔗 Đã copy link: ${qrLink}`, true);
+            setTimeout(() => {
+                document.getElementById('node-info-card').classList.add('hidden');
+                activeNodeId = null;
+                renderNodes();
+            }, 1500);
+        }).catch(err => {
+            showMsg(`Lỗi copy! Link thủ công: ${qrLink}`, false);
+            console.error('Không thể copy text: ', err);
+        });
     };
 
     function handleNodeClick(id) {
@@ -1763,7 +1788,6 @@
     viewport.onmousedown = (e) => { 
         if(e.target.closest('.node-ui') || e.target.closest('aside') || e.target.closest('div.absolute') || e.target.closest('div.fixed')) return; 
         
-        // Ẩn Node Info Card nếu chạm ra ngoài bản đồ
         if(activeNodeId) {
             document.getElementById('node-info-card').classList.add('hidden');
             activeNodeId = null;
@@ -1811,7 +1835,6 @@
     viewport.addEventListener('touchstart', (e) => {
         if(e.target.closest('.node-ui') || e.target.closest('aside') || e.target.closest('div.absolute') || e.target.closest('div.fixed')) return;
         
-        // Ẩn Node Info Card nếu chạm ra ngoài bản đồ
         if(activeNodeId) {
             document.getElementById('node-info-card').classList.add('hidden');
             activeNodeId = null;
