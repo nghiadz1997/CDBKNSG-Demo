@@ -600,7 +600,7 @@
                             }
                         }
                         
-                        // ĐỌC THAM SỐ TỪ URL (QUÉT MÃ QR)
+                        // ĐỌC THAM SỐ TỪ URL (QUÉT MÃ QR) - ĐÃ BỎ LỆNH ZOOM GÂY LỆCH CAMERA
                         if (!hasProcessedQR) {
                             const urlParams = new URLSearchParams(window.location.search);
                             const qrLocationId = urlParams.get('loc'); 
@@ -609,7 +609,7 @@
                                 localStorage.setItem('ind_local_start_id', qrLocationId); 
                                 
                                 setTimeout(() => {
-                                    focusSingleNode(nodes[qrLocationId]);
+                                    renderNodes();
                                     showMsg(`📍 Đã định vị bạn tại: ${nodes[qrLocationId].label.toUpperCase()}`);
                                 }, 800);
                             }
@@ -1615,9 +1615,6 @@
         showRouteSummaryUI(localEndId);
     };
 
-    // ==========================================
-    // LOGIC NÚT COPY LINK TẠO QR ĐÃ ĐƯỢC THÊM
-    // ==========================================
     document.getElementById('btn-copy-link').onclick = () => {
         if(!activeNodeId) return;
         
