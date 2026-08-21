@@ -360,7 +360,7 @@
     function sendTelegramLog(startName, endName) {
         if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || TELEGRAM_BOT_TOKEN.includes("YOUR")) return;
         const timeStr = new Date().toLocaleString("vi-VN");
-        const message = `🗺️ [ĐIỀU HƯỚNG TÌM ĐƯỜNG]\n⏱ Thời gian: ${timeStr}\n📍 Xuất phát: ${startName}\n🎯 Điểm đến: ${endName}`;
+        const message = `🗺️📍Người Dùng Vừa Tra Cứu Vị Trí\n⏱ Thời gian: ${timeStr}\n📍 Xuất phát: ${startName}\n🎯 Điểm đến: ${endName}`;
         
         // Tạo đường dẫn API Telegram dạng GET và dùng Image object để bypass CORS 100%
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=` + encodeURIComponent(message);
