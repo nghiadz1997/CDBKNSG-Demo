@@ -354,22 +354,21 @@
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- CẤU HÌNH TELEGRAM BOT ---
-    const TELEGRAM_BOT_TOKEN = "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ"; // Thay Token Bot của bạn vào đây
+    const TELEGRAM_BOT_TOKEN = "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ"; 
     const TELEGRAM_CHAT_ID = "6159104725";       // Thay Chat ID của bạn vào đây
 
     function sendTelegramLog(startName, endName) {
-        if (TELEGRAM_BOT_TOKEN === "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ" || TELEGRAM_CHAT_ID === "6159104725") return;
+        if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || TELEGRAM_BOT_TOKEN.includes("YOUR")) return;
         const timeStr = new Date().toLocaleString("vi-VN");
         const message = `🗺️ [ĐIỀU HƯỚNG TÌM ĐƯỜNG]\n⏱ Thời gian: ${timeStr}\n📍 Xuất phát: ${startName}\n🎯 Điểm đến: ${endName}`;
         
+        // Tạo đường dẫn API Telegram dạng GET và dùng Image object để bypass CORS 100%
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=` + encodeURIComponent(message);
         
-        // Sử dụng Image object để bypass triệt để lỗi CORS của trình duyệt
         const img = new Image();
         img.src = url;
     }
     // ----------------------------
-
     const firebaseConfig = {
         apiKey: "AIzaSyDi5gsOdE9tGOR6JQzMgw_9QscD-XBRNwk",
         authDomain: "alook-26a1f.firebaseapp.com",
