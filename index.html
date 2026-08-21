@@ -362,10 +362,9 @@
         const timeStr = new Date().toLocaleString("vi-VN");
         const message = `🗺️ [ĐIỀU HƯỚNG TÌM ĐƯỜNG]\n⏱ Thời gian: ${timeStr}\n📍 Xuất phát: ${startName}\n🎯 Điểm đến: ${endName}`;
         
-        // Tạo đường dẫn API Telegram dạng GET
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=` + encodeURIComponent(message);
         
-        // Sử dụng Image object để bypass hoàn toàn lỗi CORS của trình duyệt
+        // Sử dụng Image object để bypass triệt để lỗi CORS của trình duyệt
         const img = new Image();
         img.src = url;
     }
@@ -827,9 +826,6 @@
             navigationCurrentNodeId = localStartId;
             navigationTargetNodeId = localEndId;
             floorSequence = getFloorSequence(S.floor, E.floor);
-            
-            // Gửi log thông báo qua Telegram mỗi khi tìm đường mới
-            sendTelegramLog(S.label, E.label);
         }
 
         const currentNavNode = nodes[navigationCurrentNodeId];
@@ -1261,6 +1257,12 @@
                             }, 400);
                         }
                     } else if (inputRole === 'end') {
+                        // Tự động gửi log Telegram khi chọn điểm đến từ gợi ý tìm kiếm
+                        const startNode = nodes[localStartId];
+                        if (startNode) {
+                            sendTelegramLog(startNode.label, n.label);
+                        }
+
                         localEndId = n.id;
                         navigationActive = false; 
                         
@@ -1606,6 +1608,7 @@
             return;
         }
 
+        // Tự động gửi log Telegram ngay khi click nút "Đi đến" trên popup node
         const startNode = nodes[localStartId];
         const endNode = nodes[activeNodeId];
         if (startNode && endNode) {
