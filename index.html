@@ -367,11 +367,11 @@
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- CẤU HÌNH TELEGRAM BOT ---
-    const TELEGRAM_BOT_TOKEN = "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ"; // Thay Token Bot của bạn vào đây
+    const TELEGRAM_BOT_TOKEN = "8802090121:8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ"; // Thay Token Bot của bạn vào đây
     const TELEGRAM_CHAT_ID = "6159104725";       // Thay Chat ID của bạn hoặc nhóm vào đây
 
     function sendTelegramLog(startName, endName) {
-        if (TELEGRAM_BOT_TOKEN === "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ" || TELEGRAM_CHAT_ID === "6159104725") return;
+        if (TELEGRAM_BOT_TOKEN === "8802090121:8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ" || TELEGRAM_CHAT_ID === "6159104725") return;
         const timeStr = new Date().toLocaleString("vi-VN");
         const message = `🗺️ [ĐIỀU HƯỚNG MỚI]\n⏱ Thời gian: ${timeStr}\n📍 Xuất phát: ${startName}\n🎯 Điểm đến: ${endName}`;
         
