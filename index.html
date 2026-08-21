@@ -366,6 +366,27 @@
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    // --- CẤU HÌNH TELEGRAM BOT ---
+    const TELEGRAM_BOT_TOKEN = "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ"; // Thay Token Bot của bạn vào đây
+    const TELEGRAM_CHAT_ID = "6159104725";       // Thay Chat ID của bạn hoặc nhóm vào đây
+
+    function sendTelegramLog(startName, endName) {
+        if (TELEGRAM_BOT_TOKEN === "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ" || TELEGRAM_CHAT_ID === "6159104725") return;
+        const timeStr = new Date().toLocaleString("vi-VN");
+        const message = `🗺️ [ĐIỀU HƯỚNG MỚI]\n⏱ Thời gian: ${timeStr}\n📍 Xuất phát: ${startName}\n🎯 Điểm đến: ${endName}`;
+        
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                text: message
+            })
+        }).catch(err => console.error("Telegram log error:", err));
+    }
+    // ----------------------------
+
     const firebaseConfig = {
         apiKey: "AIzaSyDi5gsOdE9tGOR6JQzMgw_9QscD-XBRNwk",
         authDomain: "alook-26a1f.firebaseapp.com",
@@ -829,6 +850,9 @@
             navigationCurrentNodeId = localStartId;
             navigationTargetNodeId = localEndId;
             floorSequence = getFloorSequence(S.floor, E.floor);
+            
+            // Tích hợp gửi Log về Telegram khi bắt đầu tìm đường mới
+            sendTelegramLog(S.label, E.label);
         }
 
         const currentNavNode = nodes[navigationCurrentNodeId];
