@@ -98,10 +98,8 @@
 
 <div class="flex h-full h-[100dvh] w-screen relative overflow-hidden bg-slate-200" id="app-root">
     
-    <!-- Lớp phủ mờ nền khi mở sidebar trên các thiết bị màn hình nhỏ -->
     <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[190] transition-opacity duration-300"></div>
 
-    <!-- Hộp tìm kiếm chính nổi trên bản đồ -->
     <div class="absolute top-4 left-4 right-4 lg:left-[340px] md:right-auto md:w-96 z-[140] flex flex-col gap-2 pointer-events-none">
         <div class="w-full bg-white/95 backdrop-blur-md shadow-xl rounded-2xl p-3 flex items-center gap-2.5 border border-slate-100 pointer-events-auto transition-all">
             <button id="menu-trigger-btn" class="p-2.5 hover:bg-slate-100 rounded-xl text-slate-600 transition-colors" title="Mở danh mục sơ đồ">
@@ -137,18 +135,14 @@
 
         <div class="flex-1 overflow-y-auto p-4 space-y-4">
             
-            <!-- THIẾT LẬP LỘ TRÌNH -->
             <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl relative shadow-sm space-y-3">
                 <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">🔍 Thiết lập lộ trình</span>
                 
-                <!-- Trạng thái chặng di chuyển -->
                 <div id="sidebar-route-status" class="hidden text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 p-2.5 rounded-xl text-center uppercase tracking-tight animate-pulse"></div>
 
                 <div class="relative flex flex-col gap-3 pl-6">
-                    <!-- Đường kẻ nét đứt nối hai vị trí -->
                     <div class="absolute left-3.5 top-4 bottom-4 w-px border-l-2 border-dashed border-slate-300"></div>
                     
-                    <!-- Nhập điểm xuất phát -->
                     <div class="relative">
                         <div class="absolute -left-[19px] top-3.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100"></div>
                         <span class="text-[8px] font-black text-slate-400 block uppercase mb-1">Điểm xuất phát</span>
@@ -157,7 +151,6 @@
                         <div id="sidebar-start-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 max-h-48 bg-white/95 border border-slate-100 shadow-xl rounded-xl overflow-y-auto z-[250]"></div>
                     </div>
                     
-                    <!-- Nhập điểm muốn đến -->
                     <div class="relative">
                         <div class="absolute -left-[19px] top-3.5 w-2.5 h-2.5 rounded-full bg-orange-500 ring-4 ring-orange-100"></div>
                         <span class="text-[8px] font-black text-slate-400 block uppercase mb-1">Điểm đến</span>
@@ -168,7 +161,6 @@
                 </div>
             </div>
 
-            <!-- BẢNG ĐIỀU KHIỂN ADMIN -->
             <div id="admin-tools" class="hidden space-y-3 bg-indigo-50/40 p-3 rounded-2xl border border-indigo-100">
                 <div class="flex items-center justify-between border-b border-indigo-100 pb-2">
                     <span class="text-[9px] font-bold text-indigo-500 uppercase">Quản trị Hệ thống</span>
@@ -248,7 +240,6 @@
             <button id="btn-route-switch-floor-fast" class="hidden w-full py-2 mt-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase transition-all">Chuyển sang tầng tiếp theo</button>
         </div>
 
-        <!-- BẢNG POPUP THÔNG TIN KHI CLICK VÀO NODE -->
         <div id="node-info-card" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 w-11/12 max-w-sm bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl p-4 flex flex-col gap-3 z-[150] border border-slate-100/50 transition-all duration-300">
             <div class="flex justify-between items-start">
                 <div class="flex-1 pr-2">
@@ -259,7 +250,6 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
-            <!-- BỘ 3 NÚT: XUẤT PHÁT, ĐẾN, VÀ COPY LINK -->
             <div class="grid grid-cols-3 gap-2 mt-1">
                 <button id="btn-set-start" class="flex flex-col items-center justify-center py-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 hover:bg-emerald-500 hover:text-white transition-colors active:scale-95">
                     <span class="text-lg mb-0.5">📍</span>
@@ -300,7 +290,6 @@
         </div>
     </main>
 
-    <!-- HỘP ĐĂNG NHẬP XÁC THỰC -->
     <div id="login-modal" class="hidden fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
         <div class="bg-white rounded-3xl p-6 shadow-2xl w-full max-w-xs text-center space-y-4 border">
             <h2 class="text-xs font-black uppercase text-slate-800 tracking-wider">Xác thực Quản trị</h2>
@@ -312,7 +301,6 @@
         </div>
     </div>
 
-    <!-- BẢNG CẤU HÌNH ĐIỂM DÀNH CHO ADMIN -->
     <div id="props-panel" class="hidden absolute bottom-24 right-4 md:top-4 md:right-4 w-[280px] bg-white rounded-2xl shadow-2xl border p-4 space-y-4 z-[160]">
         <div class="flex justify-between items-center border-b pb-2">
             <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cấu hình Điểm</span>
@@ -338,7 +326,6 @@
             </div>
         </div>
         
-        <!-- BẢNG LIÊN KẾT ĐẦU NỐI -->
         <div id="props-panel-transition-link" class="space-y-1 hidden">
             <label class="text-[9px] font-bold text-slate-400 uppercase">Liên kết tới Node lầu khác</label>
             <select id="node-connected-select" class="w-full p-2.5 bg-slate-50 border text-slate-800 rounded-lg text-xs outline-none font-bold"></select>
@@ -367,13 +354,13 @@
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- CẤU HÌNH TELEGRAM BOT ---
-    const TELEGRAM_BOT_TOKEN = "8802090121:8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ"; // Thay Token Bot của bạn vào đây
-    const TELEGRAM_CHAT_ID = "6159104725";       // Thay Chat ID của bạn hoặc nhóm vào đây
+    const TELEGRAM_BOT_TOKEN = "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ"; // Thay Token Bot của bạn vào đây
+    const TELEGRAM_CHAT_ID = "6159104725";       // Thay Chat ID của bạn vào đây
 
     function sendTelegramLog(startName, endName) {
-        if (TELEGRAM_BOT_TOKEN === "8802090121:8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ" || TELEGRAM_CHAT_ID === "6159104725") return;
+        if (TELEGRAM_BOT_TOKEN === "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ" || TELEGRAM_CHAT_ID === "6159104725") return;
         const timeStr = new Date().toLocaleString("vi-VN");
-        const message = `🗺️ [ĐIỀU HƯỚNG MỚI]\n⏱ Thời gian: ${timeStr}\n📍 Xuất phát: ${startName}\n🎯 Điểm đến: ${endName}`;
+        const message = `🗺️ [ĐIỀU HƯỚNG TÌM ĐƯỜNG]\n⏱ Thời gian: ${timeStr}\n📍 Xuất phát: ${startName}\n🎯 Điểm đến: ${endName}`;
         
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
         fetch(url, {
@@ -404,18 +391,15 @@
 
     const MAP_WIDTH = 1200, MAP_HEIGHT = 800;
     
-    // CƠ SỞ DỮ LIỆU ĐƯỢC CHIA SẺ TRÊN FIREBASE
     let nodes = {}, edges = [];
     let floorRotations = {}; 
     
-    // TRẠNG THÁI KHÁCH HÀNG CỤC BỘ CÔ LẬP
     let localStartId = 'n_hcm';
     let localEndId = null;
     let route = [];
     let crossFloorRouting = null;
-    let activeNodeId = null; // Node đang được chọn cho popup Info
+    let activeNodeId = null; 
 
-    // TRẠNG THÁI CHỈ ĐƯỜNG ĐA TẦNG TUẦN TỰ
     let navigationActive = false;
     let navigationCurrentNodeId = null; 
     let navigationTargetNodeId = null;  
@@ -428,9 +412,8 @@
     let user = null, loginClickCount = 0;
 
     let lastWidth = window.innerWidth;
-    let hasProcessedQR = false; // Cờ kiểm tra quét mã QR lần đầu
+    let hasProcessedQR = false; 
 
-    // CÁC BIẾN HỖ TRỢ THU PHÓNG ĐA ĐIỂM
     let initScale = 1;
     let initViewX = 0;
     let initViewY = 0;
@@ -466,11 +449,9 @@
     const syncText = document.getElementById('sync-text');
     const msgBox = document.getElementById('msg-box');
     
-    // TÌM KIẾM CHÍNH
     const searchInput = document.getElementById('smart-search-input');
     const suggestionsBox = document.getElementById('search-suggestions');
 
-    // CÁC THÀNH PHẦN TRONG SIDEBAR
     const sidebarStartInput = document.getElementById('sidebar-start-input');
     const sidebarStartSuggestions = document.getElementById('sidebar-start-suggestions');
     const clearSidebarStartBtn = document.getElementById('clear-sidebar-start-btn');
@@ -621,7 +602,6 @@
                             }
                         }
                         
-                        // ĐỌC THAM SỐ TỪ URL (QUÉT MÃ QR) - ĐÃ BỎ LỆNH ZOOM GÂY LỆCH CAMERA
                         if (!hasProcessedQR) {
                             const urlParams = new URLSearchParams(window.location.search);
                             const qrLocationId = urlParams.get('loc'); 
@@ -851,7 +831,7 @@
             navigationTargetNodeId = localEndId;
             floorSequence = getFloorSequence(S.floor, E.floor);
             
-            // Tích hợp gửi Log về Telegram khi bắt đầu tìm đường mới
+            // Gửi log thông báo qua Telegram mỗi khi tìm đường mới
             sendTelegramLog(S.label, E.label);
         }
 
@@ -1628,6 +1608,13 @@
             showMsg("Bạn đang ở vị trí này rồi!", false);
             return;
         }
+
+        const startNode = nodes[localStartId];
+        const endNode = nodes[activeNodeId];
+        if (startNode && endNode) {
+            sendTelegramLog(startNode.label, endNode.label);
+        }
+
         localEndId = activeNodeId;
         navigationActive = false;
         showMsg("Đang vẽ tuyến đường đến: " + nodes[activeNodeId].label);
@@ -2035,6 +2022,11 @@
                     localStorage.setItem('ind_local_start_id', 'n_hcm');
                 }
                 
+                const startNode = nodes[localStartId];
+                if (startNode && target) {
+                    sendTelegramLog(startNode.label, target.label);
+                }
+
                 updateUI();
                 updateRouteAndUI();
                 buildQrLocationSelector();
