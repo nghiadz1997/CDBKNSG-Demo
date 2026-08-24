@@ -283,7 +283,7 @@
             </div>
         </div>
 
-        <div id="quick-actions-bar" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[130] w-11/12 max-w-sm bg-white/90 backdrop-blur-md shadow-2xl rounded-2xl p-2 flex justify-around items-center border border-white/20 transition-all duration-300">
+        <div id="quick-actions-bar" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-[130] w-11/12 max-w-sm bg-white/90 backdrop-blur-md shadow-2xl rounded-2xl p-2 flex justify-around items-center border border-white/20 transition-all duration-300">
             <button class="quick-action-btn flex flex-col items-center p-2 text-slate-600 hover:text-indigo-600 transition-colors" data-type="wc">
                 <span class="text-lg md:text-xl">🚻</span><span class="text-[8px] md:text-[9px] font-bold uppercase">WC</span>
             </button>
@@ -417,6 +417,7 @@
 
     let lastWidth = window.innerWidth;
     let hasProcessedQR = false; 
+    let isFirstLoad = true; // ĐÃ THÊM: Biến kiểm soát việc map nhảy về tầng 1
 
     // CÁC BIẾN HỖ TRỢ THU PHÓNG ĐA ĐIỂM
     let initScale = 1;
@@ -632,8 +633,12 @@
                             hasProcessedQR = true;
                         }
 
-                        if (nodes[localStartId]) {
-                            currentFloorId = nodes[localStartId].floor;
+                        // ĐÃ FIX: Chỉ reset bản đồ về điểm xuất phát trong lần tải trang đầu tiên
+                        if (isFirstLoad) {
+                            if (nodes[localStartId]) {
+                                currentFloorId = nodes[localStartId].floor;
+                            }
+                            isFirstLoad = false;
                         }
 
                         sanitizeConnections();
@@ -1535,7 +1540,7 @@
                     window.removeEventListener('touchmove', onM); window.removeEventListener('touchend', onE);
                     if (hM) { 
                         div.classList.remove('dragging'); 
-                        div.dataset.dragged = "true"; // Đánh dấu là thao tác kéo chứ không phải click
+                        div.dataset.dragged = "true"; 
                         saveData(true); 
                     } 
                 };
@@ -1546,12 +1551,11 @@
             div.onmousedown = (e) => { e.stopPropagation(); onS(e.clientX, e.clientY); };
             div.ontouchstart = (e) => { e.stopPropagation(); onS(e.touches[0].clientX, e.touches[0].clientY); };
             
-            // ĐÃ FIX: Khôi phục sự kiện click chuẩn cho cả User bình thường và Admin
             div.onclick = (e) => { 
                 e.stopPropagation(); 
                 if (div.dataset.dragged === "true") {
                     div.dataset.dragged = "false";
-                    return; // Bỏ qua nếu Admin vừa kéo thả xong để không bị nhầm lẫn
+                    return; 
                 }
                 handleNodeClick(node.id); 
             };
@@ -1678,7 +1682,7 @@
         const idx = edges.findIndex(e => (e[0]===id1 && e[1]===id2) || (e[0]===id2 && e[1]===id1));
         if(idx !== -1) edges.splice(idx, 1); else edges.push([id1, id2]);
         renderEdges();
-        saveData(true); // ĐÃ FIX: Tự động lưu thao tác Nối để không bị xóa mất bởi Cloud Sync
+        saveData(true); 
     }
 
     function handleNodeClick(id) {
