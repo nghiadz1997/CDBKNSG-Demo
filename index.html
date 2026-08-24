@@ -283,7 +283,8 @@
             </div>
         </div>
 
-        <div id="quick-actions-bar" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-[130] w-11/12 max-w-sm bg-white/90 backdrop-blur-md shadow-2xl rounded-2xl p-2 flex justify-around items-center border border-white/20 transition-all duration-300">
+        <!-- THANH QUICK ACTIONS ĐÃ ẨN -->
+        <div id="quick-actions-bar" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-[130] w-11/12 max-w-sm bg-white/90 backdrop-blur-md shadow-2xl rounded-2xl p-2 justify-around items-center border border-white/20 transition-all duration-300">
             <button class="quick-action-btn flex flex-col items-center p-2 text-slate-600 hover:text-indigo-600 transition-colors" data-type="wc">
                 <span class="text-lg md:text-xl">🚻</span><span class="text-[8px] md:text-[9px] font-bold uppercase">WC</span>
             </button>
@@ -386,24 +387,34 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     
-    // ĐÃ ĐỔI TÊN APP_ID ĐỂ TẠO DATABASE MỚI TINH - TRÁNH BỊ DỮ LIỆU CŨ PHÁ HOẠI
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'indoor-nav-v6-secure'; 
     const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'mapState', 'main');
 
     const MAP_WIDTH = 1200, MAP_HEIGHT = 800;
     
-    // CƠ SỞ DỮ LIỆU ĐƯỢC CHIA SẺ TRÊN FIREBASE
     let nodes = {}, edges = [];
     let floorRotations = {}; 
     
-    // TRẠNG THÁI KHÁCH HÀNG CỤC BỘ CÔ LẬP
+    // CẤU HÌNH TELEGRAM BOT MẪU CHUẨN
+    const TELEGRAM_BOT_TOKEN = "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ"; // Điền Token Bot của bạn vào đây
+    const TELEGRAM_CHAT_ID = "6159104725";   // Điền Chat ID của bạn vào đây
+
+    function sendTelegramNotification(message) {
+        if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || TELEGRAM_BOT_TOKEN.includes("EXAMPLE")) return;
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'Markdown' })
+        }).catch(err => console.error("Telegram error:", err));
+    }
+    
     let localStartId = 'n_hcm';
     let localEndId = null;
     let route = [];
     let crossFloorRouting = null;
     let activeNodeId = null; 
 
-    // TRẠNG THÁI CHỈ ĐƯỜNG ĐA TẦNG TUẦN TỰ
     let navigationActive = false;
     let navigationCurrentNodeId = null; 
     let navigationTargetNodeId = null;  
@@ -417,9 +428,8 @@
 
     let lastWidth = window.innerWidth;
     let hasProcessedQR = false; 
-    let isFirstLoad = true; // ĐÃ THÊM: Biến kiểm soát việc map nhảy về tầng 1
+    let isFirstLoad = true; 
 
-    // CÁC BIẾN HỖ TRỢ THU PHÓNG ĐA ĐIỂM
     let initScale = 1;
     let initViewX = 0;
     let initViewY = 0;
@@ -455,11 +465,9 @@
     const syncText = document.getElementById('sync-text');
     const msgBox = document.getElementById('msg-box');
     
-    // TÌM KIẾM CHÍNH
     const searchInput = document.getElementById('smart-search-input');
     const suggestionsBox = document.getElementById('search-suggestions');
 
-    // CÁC THÀNH PHẦN TRONG SIDEBAR
     const sidebarStartInput = document.getElementById('sidebar-start-input');
     const sidebarStartSuggestions = document.getElementById('sidebar-start-suggestions');
     const clearSidebarStartBtn = document.getElementById('clear-sidebar-start-btn');
@@ -633,7 +641,6 @@
                             hasProcessedQR = true;
                         }
 
-                        // ĐÃ FIX: Chỉ reset bản đồ về điểm xuất phát trong lần tải trang đầu tiên
                         if (isFirstLoad) {
                             if (nodes[localStartId]) {
                                 currentFloorId = nodes[localStartId].floor;
@@ -850,6 +857,13 @@
             navigationCurrentNodeId = localStartId;
             navigationTargetNodeId = localEndId;
             floorSequence = getFloorSequence(S.floor, E.floor);
+            
+            // BẮN THÔNG BÁO VỀ TELEGRAM THEO MẪU CHUẨN MÀ BẠN YÊU CẦU
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')} ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+            
+            const teleMsg = `🗺️ 📍 Người Dùng Vừa Tra Cứu Vị Trí\n⏱️ Thời gian: ${timeStr}\n📍 Xuất phát: ${S.label.toUpperCase()}\n🎯 Điểm đến: ${E.label.toUpperCase()}`;
+            sendTelegramNotification(teleMsg);
         }
 
         const currentNavNode = nodes[navigationCurrentNodeId];
@@ -2127,9 +2141,6 @@
         };
     });
 
-    // ==========================================
-    // KHU VỰC QUẢN TRỊ VIÊN VÀ MẬT KHẨU
-    // ==========================================
     document.getElementById('secret-login-trigger').onclick = () => {
         loginClickCount++; if (loginClickCount >= 5) { loginModal.classList.remove('hidden'); loginClickCount = 0; }
     };
@@ -2175,9 +2186,6 @@
 
     document.getElementById('btn-save-all').onclick = () => { sanitizeConnections(); saveData(); };
 
-    // ==========================================
-    // TÍNH NĂNG BACKUP (XUẤT DỮ LIỆU JSON)
-    // ==========================================
     document.getElementById('btn-backup').onclick = () => {
         const data = { nodes, edges, floorRotations };
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
@@ -2190,9 +2198,6 @@
         showMsg("Đã tải file Backup thành công!", true);
     };
 
-    // ==========================================
-    // TÍNH NĂNG RESTORE (PHỤC HỒI DỮ LIỆU)
-    // ==========================================
     document.getElementById('btn-restore-trigger').onclick = () => {
         document.getElementById('file-restore').click();
     };
