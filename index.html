@@ -98,8 +98,10 @@
 
 <div class="flex h-full h-[100dvh] w-screen relative overflow-hidden bg-slate-200" id="app-root">
     
+    <!-- Lớp phủ mờ nền khi mở sidebar trên các thiết bị màn hình nhỏ -->
     <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[190] transition-opacity duration-300"></div>
 
+    <!-- Hộp tìm kiếm chính nổi trên bản đồ -->
     <div class="absolute top-4 left-4 right-4 lg:left-[340px] md:right-auto md:w-96 z-[140] flex flex-col gap-2 pointer-events-none">
         <div class="w-full bg-white/95 backdrop-blur-md shadow-xl rounded-2xl p-3 flex items-center gap-2.5 border border-slate-100 pointer-events-auto transition-all">
             <button id="menu-trigger-btn" class="p-2.5 hover:bg-slate-100 rounded-xl text-slate-600 transition-colors" title="Mở danh mục sơ đồ">
@@ -135,14 +137,18 @@
 
         <div class="flex-1 overflow-y-auto p-4 space-y-4">
             
+            <!-- THIẾT LẬP LỘ TRÌNH -->
             <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl relative shadow-sm space-y-3">
                 <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">🔍 Thiết lập lộ trình</span>
                 
+                <!-- Trạng thái chặng di chuyển -->
                 <div id="sidebar-route-status" class="hidden text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 p-2.5 rounded-xl text-center uppercase tracking-tight animate-pulse"></div>
 
                 <div class="relative flex flex-col gap-3 pl-6">
+                    <!-- Đường kẻ nét đứt nối hai vị trí -->
                     <div class="absolute left-3.5 top-4 bottom-4 w-px border-l-2 border-dashed border-slate-300"></div>
                     
+                    <!-- Nhập điểm xuất phát -->
                     <div class="relative">
                         <div class="absolute -left-[19px] top-3.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100"></div>
                         <span class="text-[8px] font-black text-slate-400 block uppercase mb-1">Điểm xuất phát</span>
@@ -151,6 +157,7 @@
                         <div id="sidebar-start-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 max-h-48 bg-white/95 border border-slate-100 shadow-xl rounded-xl overflow-y-auto z-[250]"></div>
                     </div>
                     
+                    <!-- Nhập điểm muốn đến -->
                     <div class="relative">
                         <div class="absolute -left-[19px] top-3.5 w-2.5 h-2.5 rounded-full bg-orange-500 ring-4 ring-orange-100"></div>
                         <span class="text-[8px] font-black text-slate-400 block uppercase mb-1">Điểm đến</span>
@@ -161,6 +168,7 @@
                 </div>
             </div>
 
+            <!-- BẢNG ĐIỀU KHIỂN ADMIN -->
             <div id="admin-tools" class="hidden space-y-3 bg-indigo-50/40 p-3 rounded-2xl border border-indigo-100">
                 <div class="flex items-center justify-between border-b border-indigo-100 pb-2">
                     <span class="text-[9px] font-bold text-indigo-500 uppercase">Quản trị Hệ thống</span>
@@ -172,6 +180,13 @@
                     <button data-mode="connect" class="tool-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[9px] font-black uppercase">Nối</button>
                 </div>
                 <button id="btn-save-all" class="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-lg hover:bg-indigo-700 transition-all">LƯU THAY ĐỔI SƠ ĐỒ</button>
+                
+                <!-- NÚT BACKUP VÀ RESTORE DỮ LIỆU -->
+                <div class="grid grid-cols-2 gap-2 mt-2 border-t border-indigo-100 pt-2">
+                    <button id="btn-backup" class="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 text-[9px] font-black uppercase hover:bg-emerald-500 hover:text-white transition-all">📥 TẢI BACKUP</button>
+                    <button id="btn-restore-trigger" class="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 text-[9px] font-black uppercase hover:bg-amber-500 hover:text-white transition-all">📤 PHỤC HỒI</button>
+                    <input type="file" id="file-restore" accept=".json" class="hidden">
+                </div>
             </div>
 
             <div class="space-y-1.5">
@@ -240,6 +255,7 @@
             <button id="btn-route-switch-floor-fast" class="hidden w-full py-2 mt-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase transition-all">Chuyển sang tầng tiếp theo</button>
         </div>
 
+        <!-- BẢNG POPUP THÔNG TIN KHI CLICK VÀO NODE -->
         <div id="node-info-card" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 w-11/12 max-w-sm bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl p-4 flex flex-col gap-3 z-[150] border border-slate-100/50 transition-all duration-300">
             <div class="flex justify-between items-start">
                 <div class="flex-1 pr-2">
@@ -250,6 +266,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
+            <!-- BỘ 3 NÚT: XUẤT PHÁT, ĐẾN, VÀ COPY LINK -->
             <div class="grid grid-cols-3 gap-2 mt-1">
                 <button id="btn-set-start" class="flex flex-col items-center justify-center py-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 hover:bg-emerald-500 hover:text-white transition-colors active:scale-95">
                     <span class="text-lg mb-0.5">📍</span>
@@ -290,6 +307,7 @@
         </div>
     </main>
 
+    <!-- HỘP ĐĂNG NHẬP XÁC THỰC -->
     <div id="login-modal" class="hidden fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
         <div class="bg-white rounded-3xl p-6 shadow-2xl w-full max-w-xs text-center space-y-4 border">
             <h2 class="text-xs font-black uppercase text-slate-800 tracking-wider">Xác thực Quản trị</h2>
@@ -301,6 +319,7 @@
         </div>
     </div>
 
+    <!-- BẢNG CẤU HÌNH ĐIỂM DÀNH CHO ADMIN -->
     <div id="props-panel" class="hidden absolute bottom-24 right-4 md:top-4 md:right-4 w-[280px] bg-white rounded-2xl shadow-2xl border p-4 space-y-4 z-[160]">
         <div class="flex justify-between items-center border-b pb-2">
             <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cấu hình Điểm</span>
@@ -326,6 +345,7 @@
             </div>
         </div>
         
+        <!-- BẢNG LIÊN KẾT ĐẦU NỐI -->
         <div id="props-panel-transition-link" class="space-y-1 hidden">
             <label class="text-[9px] font-bold text-slate-400 uppercase">Liên kết tới Node lầu khác</label>
             <select id="node-connected-select" class="w-full p-2.5 bg-slate-50 border text-slate-800 rounded-lg text-xs outline-none font-bold"></select>
@@ -350,25 +370,9 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // --- CẤU HÌNH TELEGRAM BOT ---
-    const TELEGRAM_BOT_TOKEN = "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ"; 
-    const TELEGRAM_CHAT_ID = "6159104725";       // Thay Chat ID của bạn vào đây
-
-    function sendTelegramLog(startName, endName) {
-        if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || TELEGRAM_BOT_TOKEN.includes("YOUR")) return;
-        const timeStr = new Date().toLocaleString("vi-VN");
-        const message = `🗺️📍Người Dùng Vừa Tra Cứu Vị Trí\n⏱ Thời gian: ${timeStr}\n📍 Xuất phát: ${startName}\n🎯 Điểm đến: ${endName}`;
-        
-        // Tạo đường dẫn API Telegram dạng GET và dùng Image object để bypass CORS 100%
-        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=` + encodeURIComponent(message);
-        
-        const img = new Image();
-        img.src = url;
-    }
-    // ----------------------------
     const firebaseConfig = {
         apiKey: "AIzaSyDi5gsOdE9tGOR6JQzMgw_9QscD-XBRNwk",
         authDomain: "alook-26a1f.firebaseapp.com",
@@ -381,20 +385,25 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'indoor-nav-v5-pro';
+    
+    // ĐÃ ĐỔI TÊN APP_ID ĐỂ TẠO DATABASE MỚI TINH - TRÁNH BỊ DỮ LIỆU CŨ PHÁ HOẠI
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'indoor-nav-v6-secure'; 
     const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'mapState', 'main');
 
     const MAP_WIDTH = 1200, MAP_HEIGHT = 800;
     
+    // CƠ SỞ DỮ LIỆU ĐƯỢC CHIA SẺ TRÊN FIREBASE
     let nodes = {}, edges = [];
     let floorRotations = {}; 
     
+    // TRẠNG THÁI KHÁCH HÀNG CỤC BỘ CÔ LẬP
     let localStartId = 'n_hcm';
     let localEndId = null;
     let route = [];
     let crossFloorRouting = null;
     let activeNodeId = null; 
 
+    // TRẠNG THÁI CHỈ ĐƯỜNG ĐA TẦNG TUẦN TỰ
     let navigationActive = false;
     let navigationCurrentNodeId = null; 
     let navigationTargetNodeId = null;  
@@ -409,6 +418,7 @@
     let lastWidth = window.innerWidth;
     let hasProcessedQR = false; 
 
+    // CÁC BIẾN HỖ TRỢ THU PHÓNG ĐA ĐIỂM
     let initScale = 1;
     let initViewX = 0;
     let initViewY = 0;
@@ -444,9 +454,11 @@
     const syncText = document.getElementById('sync-text');
     const msgBox = document.getElementById('msg-box');
     
+    // TÌM KIẾM CHÍNH
     const searchInput = document.getElementById('smart-search-input');
     const suggestionsBox = document.getElementById('search-suggestions');
 
+    // CÁC THÀNH PHẦN TRONG SIDEBAR
     const sidebarStartInput = document.getElementById('sidebar-start-input');
     const sidebarStartSuggestions = document.getElementById('sidebar-start-suggestions');
     const clearSidebarStartBtn = document.getElementById('clear-sidebar-start-btn');
@@ -607,6 +619,14 @@
                                 setTimeout(() => {
                                     renderNodes();
                                     showMsg(`📍 Đã định vị bạn tại: ${nodes[qrLocationId].label.toUpperCase()}`);
+                                    
+                                    setTimeout(() => {
+                                        toggleSidebar(true);
+                                        sidebarEndInput.placeholder = `Bạn muốn đi đâu từ [${nodes[qrLocationId].label}]?`;
+                                        sidebarEndInput.focus();
+                                        showLocationSuggestions("", sidebarEndSuggestions, 'end');
+                                    }, 1200);
+
                                 }, 800);
                             }
                             hasProcessedQR = true;
@@ -1246,22 +1266,19 @@
                         loadFloorRotationState(); 
                         
                         if (localEndId && localEndId !== n.id) {
+                            if (window.innerWidth < 1024) toggleSidebar(false);
                             updateRouteAndUI();
                         } else {
                             updateUI();
                             focusSingleNode(n);
                             setTimeout(() => {
+                                toggleSidebar(true);
+                                sidebarEndInput.placeholder = `Bạn muốn đi đâu từ [${n.label}]?`;
                                 sidebarEndInput.focus();
                                 showLocationSuggestions("", sidebarEndSuggestions, 'end');
                             }, 400);
                         }
                     } else if (inputRole === 'end') {
-                        // Tự động gửi log Telegram khi chọn điểm đến từ gợi ý tìm kiếm
-                        const startNode = nodes[localStartId];
-                        if (startNode) {
-                            sendTelegramLog(startNode.label, n.label);
-                        }
-
                         localEndId = n.id;
                         navigationActive = false; 
                         
@@ -1271,6 +1288,11 @@
                         }
 
                         showMsg("Đang vẽ tuyến đường đến: " + n.label.toUpperCase());
+                        
+                        if (window.innerWidth < 1024) {
+                            toggleSidebar(false);
+                        }
+                        
                         updateRouteAndUI();
                         showRouteSummaryUI(localEndId);
                     }
@@ -1511,7 +1533,11 @@
                 const onE = () => {
                     window.removeEventListener('mousemove', onM); window.removeEventListener('mouseup', onE);
                     window.removeEventListener('touchmove', onM); window.removeEventListener('touchend', onE);
-                    if (hM) { div.classList.remove('dragging'); saveData(true); } else handleNodeClick(node.id);
+                    if (hM) { 
+                        div.classList.remove('dragging'); 
+                        div.dataset.dragged = "true"; // Đánh dấu là thao tác kéo chứ không phải click
+                        saveData(true); 
+                    } 
                 };
                 window.addEventListener('mousemove', onM); window.addEventListener('mouseup', onE);
                 window.addEventListener('touchmove', onM, {passive:false}); window.addEventListener('touchend', onE);
@@ -1519,7 +1545,17 @@
 
             div.onmousedown = (e) => { e.stopPropagation(); onS(e.clientX, e.clientY); };
             div.ontouchstart = (e) => { e.stopPropagation(); onS(e.touches[0].clientX, e.touches[0].clientY); };
-            div.onclick = (e) => { e.stopPropagation(); handleNodeClick(node.id); };
+            
+            // ĐÃ FIX: Khôi phục sự kiện click chuẩn cho cả User bình thường và Admin
+            div.onclick = (e) => { 
+                e.stopPropagation(); 
+                if (div.dataset.dragged === "true") {
+                    div.dataset.dragged = "false";
+                    return; // Bỏ qua nếu Admin vừa kéo thả xong để không bị nhầm lẫn
+                }
+                handleNodeClick(node.id); 
+            };
+            
             nodesLayer.appendChild(div);
         });
     }
@@ -1586,6 +1622,7 @@
         document.getElementById('node-info-card').classList.add('hidden');
         
         if (localEndId && localEndId !== activeNodeId) {
+            if (window.innerWidth < 1024) toggleSidebar(false);
             updateRouteAndUI();
             showRouteSummaryUI(localEndId);
         } else {
@@ -1593,7 +1630,7 @@
             renderNodes();
             setTimeout(() => {
                 toggleSidebar(true);
-                sidebarEndInput.placeholder = `📍 Điểm muốn đến từ [${nodes[localStartId].label}]?`;
+                sidebarEndInput.placeholder = `Bạn muốn đi đâu từ [${nodes[localStartId].label}]?`;
                 sidebarEndInput.focus();
                 showLocationSuggestions("", sidebarEndSuggestions, 'end');
             }, 450);
@@ -1606,14 +1643,6 @@
             showMsg("Bạn đang ở vị trí này rồi!", false);
             return;
         }
-
-        // Tự động gửi log Telegram ngay khi click nút "Đi đến" trên popup node
-        const startNode = nodes[localStartId];
-        const endNode = nodes[activeNodeId];
-        if (startNode && endNode) {
-            sendTelegramLog(startNode.label, endNode.label);
-        }
-
         localEndId = activeNodeId;
         navigationActive = false;
         showMsg("Đang vẽ tuyến đường đến: " + nodes[activeNodeId].label);
@@ -1621,6 +1650,7 @@
         
         document.getElementById('node-info-card').classList.add('hidden');
         activeNodeId = null;
+        if (window.innerWidth < 1024) toggleSidebar(false);
         updateRouteAndUI();
         showRouteSummaryUI(localEndId);
     };
@@ -1643,6 +1673,13 @@
             console.error('Không thể copy text: ', err);
         });
     };
+
+    function toggleEdge(id1, id2) {
+        const idx = edges.findIndex(e => (e[0]===id1 && e[1]===id2) || (e[0]===id2 && e[1]===id1));
+        if(idx !== -1) edges.splice(idx, 1); else edges.push([id1, id2]);
+        renderEdges();
+        saveData(true); // ĐÃ FIX: Tự động lưu thao tác Nối để không bị xóa mất bởi Cloud Sync
+    }
 
     function handleNodeClick(id) {
         const node = nodes[id]; if(!node) return;
@@ -1667,12 +1704,6 @@
                 showNodeInfoCard(id);
             }
         }
-    }
-
-    function toggleEdge(id1, id2) {
-        const idx = edges.findIndex(e => (e[0]===id1 && e[1]===id2) || (e[0]===id2 && e[1]===id1));
-        if(idx !== -1) edges.splice(idx, 1); else edges.push([id1, id2]);
-        renderEdges();
     }
 
     function showRouteSummaryUI(destId) {
@@ -2021,11 +2052,6 @@
                     localStorage.setItem('ind_local_start_id', 'n_hcm');
                 }
                 
-                const startNode = nodes[localStartId];
-                if (startNode && target) {
-                    sendTelegramLog(startNode.label, target.label);
-                }
-
                 updateUI();
                 updateRouteAndUI();
                 buildQrLocationSelector();
@@ -2077,7 +2103,7 @@
             } else {
                 setTimeout(() => {
                     toggleSidebar(true);
-                    sidebarEndInput.placeholder = `📍 Điểm muốn đến từ [${randomNode.label}]?`;
+                    sidebarEndInput.placeholder = `Bạn muốn đi đâu từ [${randomNode.label}]?`;
                     sidebarEndInput.focus();
                     showLocationSuggestions("", sidebarEndSuggestions, 'end');
                 }, 500);
@@ -2097,24 +2123,43 @@
         };
     });
 
+    // ==========================================
+    // KHU VỰC QUẢN TRỊ VIÊN VÀ MẬT KHẨU
+    // ==========================================
     document.getElementById('secret-login-trigger').onclick = () => {
         loginClickCount++; if (loginClickCount >= 5) { loginModal.classList.remove('hidden'); loginClickCount = 0; }
     };
     document.getElementById('btn-login-confirm').onclick = () => {
-        if(document.getElementById('admin-password').value === 'Nsg@2026') {
-            isAdmin = true; loginModal.classList.add('hidden');
-            document.getElementById('admin-tools').classList.remove('hidden'); 
-            
-            document.getElementById('btn-lock-rotation').classList.remove('hidden');
-            document.getElementById('btn-rotate').classList.remove('hidden');
+        const pass = document.getElementById('admin-password').value;
+        const email = "admin@nsg.edu.vn"; 
+        
+        msgBox.innerText = "Đang xác thực..."; msgBox.style.display = 'block';
 
-            loadFloorRotationState(); 
-            updateUI();
-            showMsg("Đã kích hoạt chế độ nhà phát triển!");
-        } else showMsg("Mật khẩu truy cập không chính xác!", false);
+        signInWithEmailAndPassword(auth, email, pass)
+            .then((userCredential) => {
+                isAdmin = true; 
+                loginModal.classList.add('hidden');
+                document.getElementById('admin-tools').classList.remove('hidden'); 
+                document.getElementById('btn-lock-rotation').classList.remove('hidden');
+                document.getElementById('btn-rotate').classList.remove('hidden');
+
+                loadFloorRotationState(); 
+                updateUI();
+                showMsg("Đã kích hoạt chế độ quản trị viên bảo mật!");
+                document.getElementById('admin-password').value = ''; 
+            })
+            .catch((error) => {
+                console.error(error);
+                showMsg("Mật khẩu truy cập không chính xác!", false);
+            });
     };
     document.getElementById('btn-login-cancel').onclick = () => loginModal.classList.add('hidden');
-    document.getElementById('btn-logout').onclick = () => { isAdmin = false; location.reload(); };
+    document.getElementById('btn-logout').onclick = () => { 
+        signOut(auth).then(() => {
+            isAdmin = false; 
+            location.reload(); 
+        });
+    };
 
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.onclick = () => {
@@ -2125,6 +2170,50 @@
     });
 
     document.getElementById('btn-save-all').onclick = () => { sanitizeConnections(); saveData(); };
+
+    // ==========================================
+    // TÍNH NĂNG BACKUP (XUẤT DỮ LIỆU JSON)
+    // ==========================================
+    document.getElementById('btn-backup').onclick = () => {
+        const data = { nodes, edges, floorRotations };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "ban_do_nsg_backup_" + Date.now() + ".json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+        showMsg("Đã tải file Backup thành công!", true);
+    };
+
+    // ==========================================
+    // TÍNH NĂNG RESTORE (PHỤC HỒI DỮ LIỆU)
+    // ==========================================
+    document.getElementById('btn-restore-trigger').onclick = () => {
+        document.getElementById('file-restore').click();
+    };
+
+    document.getElementById('file-restore').onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const importedData = JSON.parse(event.target.result);
+                if (importedData.nodes) nodes = importedData.nodes;
+                if (importedData.edges) edges = importedData.edges;
+                if (importedData.floorRotations) floorRotations = importedData.floorRotations;
+                
+                saveData(true);
+                updateUI();
+                showMsg("Đã phục hồi dữ liệu bản đồ thành công!", true);
+            } catch (err) {
+                showMsg("File Backup không hợp lệ hoặc bị lỗi!", false);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = ''; 
+    };
 
     document.getElementById('btn-cancel-route-fast').onclick = () => {
         route = []; 
