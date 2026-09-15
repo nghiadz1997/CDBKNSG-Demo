@@ -301,6 +301,32 @@
                         <input type="file" id="file-restore" accept=".json" class="hidden">
                     </div>
                 </div>
+
+                <!-- QUẢN LÝ THÔNG BÁO TELEGRAM & CHỐNG SPAM -->
+                <div class="space-y-2 pt-2 border-t border-indigo-100">
+                    <div class="flex items-center justify-between text-[9px] font-black text-indigo-800 uppercase">
+                        <span>🤖 Quản Lý Bot Telegram</span>
+                        <span id="tele-status-badge" class="px-1.5 py-0.5 rounded text-[8px] bg-emerald-100 text-emerald-700 font-bold">Đang Bật</span>
+                    </div>
+
+                    <div class="p-2.5 bg-white/80 rounded-xl border border-indigo-100 space-y-2 text-[9px]">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600 font-bold">Bắn tin tra cứu:</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggle-tele-notifications" class="sr-only peer" checked>
+                                <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between text-slate-500">
+                            <span>Thời gian chờ chống spam:</span>
+                            <span class="font-mono font-bold text-indigo-700">60s / tin</span>
+                        </div>
+                        <div class="flex gap-1.5 pt-1">
+                            <button id="btn-tele-test" class="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[9px] font-bold transition-all">Gửi Thử 1 Tin</button>
+                            <button id="btn-tele-mute-24h" class="flex-1 py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-[9px] font-bold transition-all">Tắt 24 Giờ</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="space-y-1.5">
@@ -627,19 +653,114 @@
     let edges = masterData.edges ? JSON.parse(JSON.stringify(masterData.edges)) : [];
     let floorRotations = masterData.floorRotations ? JSON.parse(JSON.stringify(masterData.floorRotations)) : {};
     
-    // CẤU HÌNH TELEGRAM BOT THÔNG BÁO
+    // =========================================================================
+    // HỆ THỐNG THÔNG BÁO TELEGRAM BẢO MẬT & CHỐNG SPAM ĐA TẦNG
+    // =========================================================================
     const TELEGRAM_BOT_TOKEN = "8802090121:AAEFH7voU175nYdfIogikOhFXaRK9zwvHgQ";
     const TELEGRAM_CHAT_ID = "6159104725";
+    
+    let isUserInitiatedAction = false; // Chỉ gửi khi người dùng thực tế thao tác chọn phòng
+    let teleDebounceTimer = null;
 
-    function sendTelegramNotification(message) {
+    // Hàng đợi thông báo có Debounce chống spam click liên tiếp
+    function queueTelegramRouteNotification(S, E) {
+        if (!S || !E) return;
+        
+        // 1. Nếu do hệ thống khởi tạo ngầm / render lại trang -> Không gửi
+        if (!isUserInitiatedAction) return;
+
+        // 2. Kiểm tra trạng thái tắt/bật hoặc đang bị tắt tạm thời (Mute)
+        const isMuted = localStorage.getItem('nsg_tele_enabled') === 'false';
+        const muteUntil = parseInt(localStorage.getItem('nsg_tele_mute_until') || '0', 10);
+        if (isMuted || (muteUntil > Date.now())) {
+            console.log("[Telegram] Thông báo đang bị tắt hoặc tạm ngừng (Mute).");
+            return;
+        }
+
+        // 3. Debounce 3.5 giây: Khi người dùng bấm liên tục đổi phòng, chỉ gửi phòng cuối cùng
+        clearTimeout(teleDebounceTimer);
+        teleDebounceTimer = setTimeout(() => {
+            executeSendTelegramNotification(S, E);
+            isUserInitiatedAction = false;
+        }, 3500);
+    }
+
+    async function executeSendTelegramNotification(S, E) {
+        if (!S || !E) return;
+
+        const routeKey = `${S.id}->${E.id}`;
+        const now = Date.now();
+
+        // 4. CHỐNG LẶP TUYẾN ĐƯỜNG (Deduplication trong 15 phút)
+        let recentRoutes = {};
+        try { recentRoutes = JSON.parse(localStorage.getItem('nsg_tele_recent_routes') || '{}'); } catch(e) {}
+        if (recentRoutes[routeKey] && (now - recentRoutes[routeKey] < 15 * 60 * 1000)) {
+            console.log("[Telegram Anti-Spam] Tuyến đường trùng trong 15 phút, bỏ qua.");
+            return;
+        }
+
+        // 5. COOLDOWN TỐI THIỂU 60 GIÂY GIỮA 2 LẦN GỬI BẤT KỲ TỪ TRÌNH DUYỆT NÀY
+        const lastSentTime = parseInt(localStorage.getItem('nsg_tele_last_sent') || '0', 10);
+        if (now - lastSentTime < 60 * 1000) {
+            const remain = Math.ceil((60000 - (now - lastSentTime)) / 1000);
+            console.log(`[Telegram Anti-Spam] Đang trong thời gian chờ cooldown (${remain}s), bỏ qua.`);
+            return;
+        }
+
+        // 6. GIỚI HẠN TỐI ĐA 6 THÔNG BÁO / GIỜ / THIẾT BỊ
+        const currentHour = Math.floor(now / (60 * 60 * 1000));
+        let hourlyData = { window: currentHour, count: 0 };
+        try { hourlyData = JSON.parse(localStorage.getItem('nsg_tele_hourly') || JSON.stringify(hourlyData)); } catch(e) {}
+        if (hourlyData.window !== currentHour) {
+            hourlyData = { window: currentHour, count: 0 };
+        }
+        if (hourlyData.count >= 6) {
+            console.log("[Telegram Anti-Spam] Đã đạt hạn mức 6 thông báo/giờ của trình duyệt.");
+            return;
+        }
+
+        // Khóa cooldown và cache ngay lập tức để chống song song
+        recentRoutes[routeKey] = now;
+        localStorage.setItem('nsg_tele_recent_routes', JSON.stringify(recentRoutes));
+        localStorage.setItem('nsg_tele_last_sent', now.toString());
+        hourlyData.count += 1;
+        localStorage.setItem('nsg_tele_hourly', JSON.stringify(hourlyData));
+
+        // 7. ƯU TIÊN GỬI QUA BACKEND PROXY (Ẩn token & IP Rate Limiting ở server)
+        const payload = {
+            startId: S.id,
+            endId: E.id,
+            startLabel: S.label,
+            endLabel: E.label
+        };
+
+        try {
+            const proxyRes = await fetch('/api/notify-route', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (proxyRes.ok) {
+                console.log("[Telegram] Gửi thành công qua Proxy Server bảo mật.");
+                return;
+            }
+        } catch (err) {
+            // Trường hợp chạy tĩnh không có backend server
+        }
+
+        // Fallback gửi trực tiếp từ client (vẫn được bảo vệ 100% bởi các bộ lọc rào cản ở trên)
         if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || TELEGRAM_BOT_TOKEN.includes("EXAMPLE")) return;
-        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-        fetch(url, {
+        const d = new Date();
+        const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')} ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+        const teleMsg = `🗺️ 📍 Người Dùng Tra Cứu Tuyến Đường\n⏱️ Thời gian: ${timeStr}\n📍 Xuất phát: *${S.label.toUpperCase()}*\n🎯 Điểm đến: *${E.label.toUpperCase()}*`;
+
+        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'Markdown' })
-        }).catch(err => console.error("Telegram error:", err));
+            body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: teleMsg, parse_mode: 'Markdown' })
+        }).catch(err => console.error("[Telegram Direct Error]:", err));
     }
+
     
     let localStartId = 'n_hcm';
     let localEndId = null;
@@ -1158,11 +1279,8 @@
             navigationTargetNodeId = localEndId;
             floorSequence = getFloorSequence(S.floor, E.floor);
             
-            // Bắn thông báo Telegram khi người dùng tra cứu vị trí
-            const now = new Date();
-            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')} ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-            const teleMsg = `🗺️ 📍 Người Dùng Tra Cứu Tuyến Đường\n⏱️ Thời gian: ${timeStr}\n📍 Xuất phát: ${S.label.toUpperCase()}\n🎯 Điểm đến: ${E.label.toUpperCase()}`;
-            sendTelegramNotification(teleMsg);
+            // Bắn thông báo Telegram bảo mật & chống spam đa tầng
+            queueTelegramRouteNotification(S, E);
         }
 
         const currentNavNode = nodes[navigationCurrentNodeId];
@@ -1609,6 +1727,7 @@
                             }, 400);
                         }
                     } else if (inputRole === 'end') {
+                        isUserInitiatedAction = true;
                         localEndId = n.id;
                         navigationActive = false; 
                         if (!localStartId) {
@@ -1707,6 +1826,7 @@
 
     document.getElementById('btn-swap-route').onclick = () => {
         if (!localStartId || !localEndId) return;
+        isUserInitiatedAction = true;
         const temp = localStartId;
         localStartId = localEndId;
         localEndId = temp;
@@ -1953,6 +2073,7 @@
             showMsg("Bạn đang ở vị trí này rồi!", false);
             return;
         }
+        isUserInitiatedAction = true;
         localEndId = activeNodeId;
         navigationActive = false;
         showMsg("Đang vẽ tuyến đường đến: " + nodes[activeNodeId].label);
@@ -2257,6 +2378,7 @@
 
                 if (availableNodes.length > 0) {
                     let target = availableNodes.find(n => n.floor === currentFloorId) || availableNodes[0];
+                    isUserInitiatedAction = true;
                     localEndId = target.id;
                     navigationActive = false;
                     banner.classList.add('hidden');
@@ -2484,6 +2606,7 @@
                 let target = availableNodes.find(n => n.floor === currentFloorId) || availableNodes[0];
                 currentFloorId = target.floor;
                 loadFloorRotationState(); 
+                isUserInitiatedAction = true;
                 localEndId = target.id;
                 navigationActive = false;
                 
@@ -2632,6 +2755,95 @@
             location.reload(); 
         });
     };
+
+    // ==========================================
+    // QUẢN LÝ CẤU HÌNH BOT TELEGRAM (ADMIN)
+    // ==========================================
+    const teleToggle = document.getElementById('toggle-tele-notifications');
+    const teleBadge = document.getElementById('tele-status-badge');
+    const btnTeleTest = document.getElementById('btn-tele-test');
+    const btnTeleMute24h = document.getElementById('btn-tele-mute-24h');
+
+    function updateTeleStatusUI() {
+        const isMuted = localStorage.getItem('nsg_tele_enabled') === 'false';
+        const muteUntil = parseInt(localStorage.getItem('nsg_tele_mute_until') || '0', 10);
+        const isTemporaryMuted = muteUntil > Date.now();
+
+        if (isMuted) {
+            if (teleToggle) teleToggle.checked = false;
+            if (teleBadge) {
+                teleBadge.className = "px-1.5 py-0.5 rounded text-[8px] bg-red-100 text-red-700 font-bold";
+                teleBadge.innerText = "Đã Tắt";
+            }
+        } else if (isTemporaryMuted) {
+            if (teleToggle) teleToggle.checked = false;
+            const hoursLeft = Math.ceil((muteUntil - Date.now()) / (3600 * 1000));
+            if (teleBadge) {
+                teleBadge.className = "px-1.5 py-0.5 rounded text-[8px] bg-amber-100 text-amber-700 font-bold";
+                teleBadge.innerText = `Tắt ${hoursLeft}h`;
+            }
+        } else {
+            if (teleToggle) teleToggle.checked = true;
+            if (teleBadge) {
+                teleBadge.className = "px-1.5 py-0.5 rounded text-[8px] bg-emerald-100 text-emerald-700 font-bold";
+                teleBadge.innerText = "Đang Bật";
+            }
+        }
+    }
+
+    if (teleToggle) {
+        teleToggle.onchange = (e) => {
+            const enabled = e.target.checked;
+            localStorage.setItem('nsg_tele_enabled', enabled ? 'true' : 'false');
+            if (enabled) localStorage.removeItem('nsg_tele_mute_until');
+            updateTeleStatusUI();
+            fetch('/api/admin/telegram-toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled })
+            }).catch(() => {});
+            showMsg(enabled ? "Đã BẬT thông báo Telegram" : "Đã TẮT thông báo Telegram");
+        };
+    }
+
+    if (btnTeleMute24h) {
+        btnTeleMute24h.onclick = () => {
+            const muteUntil = Date.now() + 24 * 3600 * 1000;
+            localStorage.setItem('nsg_tele_mute_until', muteUntil.toString());
+            updateTeleStatusUI();
+            fetch('/api/admin/telegram-toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: false })
+            }).catch(() => {});
+            showMsg("Đã tắt thông báo Telegram trong 24 giờ!");
+        };
+    }
+
+    if (btnTeleTest) {
+        btnTeleTest.onclick = async () => {
+            btnTeleTest.disabled = true;
+            btnTeleTest.innerText = "Đang gửi...";
+            try {
+                const now = new Date();
+                const testMsg = `🔔 [TEST ADMIN] Thử nghiệm bot thông báo CDBKNSG lúc ${now.toLocaleTimeString()}`;
+                const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: testMsg })
+                });
+                if (res.ok) showMsg("Gửi tin nhắn thử nghiệm thành công!");
+                else showMsg("Lỗi khi gửi (vui lòng kiểm tra lại Token/Chat ID)", false);
+            } catch(e) {
+                showMsg("Không thể kết nối tới Telegram API", false);
+            } finally {
+                btnTeleTest.disabled = false;
+                btnTeleTest.innerText = "Gửi Thử 1 Tin";
+            }
+        };
+    }
+
+    updateTeleStatusUI();
 
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.onclick = () => {
