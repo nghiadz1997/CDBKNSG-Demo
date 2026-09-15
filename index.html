@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <title>Sơ Đồ Bản Đồ Nội Bộ - Trường CĐ Bách Khoa Nam Sài Gòn</title>
+    <!-- Brand Favicon & Icons -->
+    <link rel="icon" type="image/png" href="img/logo.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="img/logo.png">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- QRCode.js for generating QR code badges -->
@@ -154,6 +158,8 @@
             <button id="menu-trigger-btn" class="p-2.5 hover:bg-slate-100 rounded-xl text-slate-700 transition-colors" title="Mở danh mục & cài đặt">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
+
+            <img src="img/logo.png" alt="Logo CDBKNSG" class="w-8 h-8 rounded-full object-contain shadow-sm border border-slate-200 hidden sm:block bg-white p-0.5" title="Trường Cao Đẳng Bách Khoa Nam Sài Gòn">
             
             <div class="flex-1 relative">
                 <input id="smart-search-input" type="text" placeholder="Tìm phòng học, khoa, tiện ích..." class="w-full pl-2 pr-7 py-1.5 bg-transparent outline-none text-xs md:text-sm font-bold text-slate-800 placeholder-slate-400">
@@ -197,13 +203,13 @@
 
     <!-- SIDEBAR PANEL -->
     <aside id="main-sidebar" class="sidebar-panel fixed inset-y-0 left-0 w-84 md:w-84 bg-white border-r border-slate-200 flex flex-col shadow-2xl -translate-x-full lg:translate-x-0 lg:static lg:z-10 w-[340px]">
-        <div class="p-5 border-b border-slate-100 bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 text-white flex justify-between items-center relative overflow-hidden">
-            <div class="relative z-10">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">🗺️</span>
+        <div class="p-4 border-b border-slate-100 bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 text-white flex justify-between items-center relative overflow-hidden">
+            <div class="relative z-10 flex items-center gap-2.5">
+                <img src="img/logo.png" alt="Logo CDBKNSG" class="w-10 h-10 rounded-full object-contain bg-white p-0.5 shadow-md ring-2 ring-white/30">
+                <div>
                     <h1 class="font-black text-sm md:text-base leading-tight tracking-wide">CDBKNSG MAPS</h1>
+                    <p class="text-[9px] text-orange-300 font-extrabold tracking-wider uppercase mt-0.5">CĐ Bách Khoa Nam Sài Gòn</p>
                 </div>
-                <p class="text-[9px] text-orange-300 font-extrabold tracking-wider uppercase mt-0.5">Cao Đẳng Bách Khoa Nam Sài Gòn</p>
             </div>
             <button id="close-sidebar-btn" class="p-2 text-white/70 hover:text-white rounded-xl hover:bg-white/10 lg:hidden transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -483,7 +489,8 @@
             <button id="btn-close-qr-modal" class="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100">✕</button>
             
             <div class="space-y-1">
-                <span class="text-[9px] font-extrabold uppercase tracking-widest text-indigo-600 block">TRƯỜNG CĐ BÁCH KHOA NAM SÀI GÒN</span>
+                <img src="img/logo.png" alt="Logo CDBKNSG" class="w-16 h-16 mx-auto object-contain drop-shadow-sm mb-1">
+                <span class="text-[9px] font-extrabold uppercase tracking-widest text-indigo-700 block">TRƯỜNG CĐ BÁCH KHOA NAM SÀI GÒN</span>
                 <h2 id="qr-modal-title" class="text-base font-black uppercase text-slate-900">PHÒNG A1.02</h2>
                 <p id="qr-modal-dept" class="text-xs text-slate-500 font-bold">Khoa Công nghệ thông tin • Tầng 1 Khu A</p>
             </div>
@@ -506,9 +513,12 @@
     <div id="campus-modal" class="hidden fixed inset-0 z-[320] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
         <div class="glass-card bg-white rounded-3xl p-5 shadow-2xl w-full max-w-3xl flex flex-col gap-3 border border-white/60 relative max-h-[90vh]">
             <div class="flex justify-between items-center border-b pb-2.5">
-                <div>
-                    <h2 class="text-sm font-black uppercase text-slate-900">Toàn Cảnh Trường CĐ Bách Khoa Nam Sài Gòn</h2>
-                    <p class="text-[10px] text-slate-400 font-bold">Sơ đồ tổng quan khuôn viên & các khối nhà A, B, C, D</p>
+                <div class="flex items-center gap-2.5">
+                    <img src="img/logo.png" alt="Logo CDBKNSG" class="w-9 h-9 rounded-full object-contain">
+                    <div>
+                        <h2 class="text-sm font-black uppercase text-slate-900">Toàn Cảnh Trường CĐ Bách Khoa Nam Sài Gòn</h2>
+                        <p class="text-[10px] text-slate-400 font-bold">Sơ đồ tổng quan khuôn viên & các khối nhà A, B, C, D</p>
+                    </div>
                 </div>
                 <button id="btn-close-campus-modal" class="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 font-bold">✕</button>
             </div>
@@ -522,9 +532,7 @@
     <!-- HỘP ĐĂNG NHẬP XÁC THỰC QUẢN TRỊ VIÊN BẢO MẬT -->
     <div id="login-modal" class="hidden fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
         <div class="bg-white rounded-3xl p-6 shadow-2xl w-full max-w-xs text-center space-y-4 border border-slate-100">
-            <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl mx-auto shadow-inner">
-                🔐
-            </div>
+            <img src="img/logo.png" alt="Logo CDBKNSG" class="w-16 h-16 mx-auto object-contain drop-shadow-sm">
             <div>
                 <h2 class="text-xs font-black uppercase text-slate-800 tracking-wider">Xác Thực Quản Trị Viên</h2>
                 <p class="text-[9px] text-slate-400 mt-1">Đăng nhập tài khoản <span class="text-indigo-600 font-bold">admin@nsg.edu.vn</span></p>
@@ -693,6 +701,11 @@
         tq.src = 'img/tongquan.jpg';
         if (tq.decode) tq.decode().catch(() => {});
         imageCache['img/tongquan.jpg'] = tq;
+
+        const logo = new Image();
+        logo.src = 'img/logo.png';
+        if (logo.decode) logo.decode().catch(() => {});
+        imageCache['img/logo.png'] = logo;
     }
     preloadAllFloorImages();
 
@@ -2001,69 +2014,75 @@
         // Vẽ ảnh bảng biển in kích thước chuẩn
         const canvas = document.createElement('canvas');
         canvas.width = 600;
-        canvas.height = 760;
+        canvas.height = 800;
         const ctx = canvas.getContext('2d');
 
         // Nền thẻ in
         ctx.fillStyle = '#ffffff';
-        ctx.roundRect(0, 0, 600, 760, 30);
+        ctx.roundRect(0, 0, 600, 800, 30);
         ctx.fill();
 
-        // Viền trang trí
-        ctx.strokeStyle = '#4338ca';
+        // Viền trang trí màu xanh thương hiệu trường
+        ctx.strokeStyle = '#273c75';
         ctx.lineWidth = 8;
-        ctx.roundRect(10, 10, 580, 740, 24);
+        ctx.roundRect(10, 10, 580, 780, 24);
         ctx.stroke();
 
-        // Header trường
-        ctx.fillStyle = '#312e81';
-        ctx.font = 'bold 22px system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('TRƯỜNG CAO ĐẲNG BÁCH KHOA NAM SÀI GÒN', 300, 70);
+        // Vẽ Logo trường chính thức ở đầu thẻ
+        const logoImg = imageCache['img/logo.png'];
+        if (logoImg && logoImg.complete) {
+            ctx.drawImage(logoImg, 260, 25, 80, 80);
+        }
 
-        ctx.fillStyle = '#ea580c';
-        ctx.font = 'bold 16px system-ui, sans-serif';
-        ctx.fillText('HỆ THỐNG ĐỊNH VỊ SƠ ĐỒ BẢN ĐỒ NỘI BỘ', 300, 105);
+        // Header trường
+        ctx.fillStyle = '#192a56';
+        ctx.font = 'bold 20px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('TRƯỜNG CAO ĐẲNG BÁCH KHOA NAM SÀI GÒN', 300, 130);
+
+        ctx.fillStyle = '#e84118';
+        ctx.font = 'bold 15px system-ui, sans-serif';
+        ctx.fillText('HỆ THỐNG ĐỊNH VỊ SƠ ĐỒ BẢN ĐỒ NỘI BỘ', 300, 156);
 
         // Đường kẻ ngăn cách
         ctx.strokeStyle = '#e2e8f0';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(40, 130); ctx.lineTo(560, 130);
+        ctx.moveTo(40, 175); ctx.lineTo(560, 175);
         ctx.stroke();
 
-        // Tên phòng
+        // Tên phòng to rõ
         ctx.fillStyle = '#0f172a';
         ctx.font = '900 36px system-ui, sans-serif';
-        ctx.fillText(node.label.toUpperCase(), 300, 185);
+        ctx.fillText(node.label.toUpperCase(), 300, 225);
 
         if (node.dept) {
             ctx.fillStyle = '#64748b';
-            ctx.font = 'bold 20px system-ui, sans-serif';
-            ctx.fillText(node.dept, 300, 225);
+            ctx.font = 'bold 19px system-ui, sans-serif';
+            ctx.fillText(node.dept, 300, 260);
         }
 
-        ctx.fillStyle = '#4f46e5';
+        ctx.fillStyle = '#273c75';
         ctx.font = 'bold 18px system-ui, sans-serif';
-        ctx.fillText(`VỊ TRÍ: ${floorObj.area} - ${floorObj.name.toUpperCase()}`, 300, 260);
+        ctx.fillText(`VỊ TRÍ: ${floorObj.area} - ${floorObj.name.toUpperCase()}`, 300, 292);
 
         // Vẽ mã QR to chính giữa
-        ctx.drawImage(qrImg, 150, 300, 300, 300);
+        ctx.drawImage(qrImg, 150, 320, 300, 300);
 
         // Hướng dẫn quét
         ctx.fillStyle = '#475569';
-        ctx.font = '16px system-ui, sans-serif';
-        ctx.fillText('Quét mã QR bằng Camera điện thoại để xem vị trí & chỉ đường', 300, 660);
+        ctx.font = '15px system-ui, sans-serif';
+        ctx.fillText('Quét mã QR bằng Camera điện thoại để xem vị trí & chỉ đường', 300, 670);
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = 'italic 13px system-ui, sans-serif';
-        ctx.fillText('Bản quyền © Trường CĐ Bách Khoa Nam Sài Gòn', 300, 705);
+        ctx.fillText('Bản quyền © Trường CĐ Bách Khoa Nam Sài Gòn', 300, 715);
 
         const a = document.createElement('a');
         a.download = `QR_${node.label.replace(/\s+/g, '_')}_CDBKNSG.png`;
         a.href = canvas.toDataURL('image/png');
         a.click();
-        showMsg("Đã tải ảnh thẻ QR PNG thành công!");
+        showMsg("Đã tải ảnh thẻ QR PNG có logo trường thành công!");
     };
 
     function toggleEdge(id1, id2) {
