@@ -349,7 +349,7 @@
         </div>
 
         <!-- THANH CHUYỂN TẦNG NỔI (FLOATING FLOOR SWITCHER) KIỂU GOOGLE MAPS INDOOR -->
-        <div id="floating-floor-dock" class="absolute right-4 bottom-28 lg:bottom-10 z-[140] flex flex-col items-center gap-1 glass-card p-1.5 rounded-2xl shadow-2xl border border-slate-200/90 pointer-events-auto">
+        <div id="floating-floor-dock" class="absolute right-3 top-32 lg:top-auto lg:bottom-10 lg:right-4 z-[140] flex flex-col items-center gap-1 glass-card p-1.5 rounded-2xl shadow-2xl border border-slate-200/90 pointer-events-auto">
             <span id="current-area-tag" class="text-[8px] font-black text-indigo-600 uppercase tracking-wider mb-0.5">KHU A</span>
             <div id="floating-floor-buttons" class="flex flex-col gap-1"></div>
         </div>
@@ -435,9 +435,37 @@
                     <span class="text-lg mb-0.5">📱</span>
                     <span class="text-[9px] font-black uppercase tracking-wider">Mã QR In</span>
                 </button>
-            </div>
         </div>
 
+        <!-- BANNER CHECK-IN NHANH TRÊN ĐIỆN THOẠI KHI QUÉT QR -->
+        <div id="mobile-qr-checkin-banner" class="hidden absolute bottom-5 left-1/2 -translate-x-1/2 w-[94%] max-w-sm glass-card border border-white/60 shadow-2xl p-3.5 rounded-3xl z-[145] flex flex-col gap-2.5 transition-all duration-300">
+            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📍</span>
+                    <div>
+                        <span class="text-[9px] font-black uppercase text-emerald-600 tracking-wider block">Bạn đang đứng tại</span>
+                        <h3 id="mobile-qr-loc-name" class="text-xs font-black text-slate-900 uppercase">PHÒNG A1.02</h3>
+                    </div>
+                </div>
+                <button id="btn-close-qr-banner" class="p-1 text-slate-400 hover:text-slate-700 rounded-lg">✕</button>
+            </div>
+            
+            <p class="text-[10px] text-slate-500 font-bold">Chọn nhanh điểm muốn đến từ đây:</p>
+            <div class="grid grid-cols-4 gap-1.5">
+                <button class="mobile-dest-quick-btn py-2 px-1 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-xl border border-slate-200 text-[10px] font-black text-center shadow-sm active:scale-95 transition-transform" data-dest="canteen">
+                    ☕ Căn tin
+                </button>
+                <button class="mobile-dest-quick-btn py-2 px-1 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-xl border border-slate-200 text-[10px] font-black text-center shadow-sm active:scale-95 transition-transform" data-dest="wc">
+                    🚻 WC
+                </button>
+                <button class="mobile-dest-quick-btn py-2 px-1 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-xl border border-slate-200 text-[10px] font-black text-center shadow-sm active:scale-95 transition-transform" data-dest="parking">
+                    🅿 Bãi xe
+                </button>
+                <button class="mobile-dest-quick-btn py-2 px-1 bg-indigo-600 text-white rounded-xl text-[10px] font-black text-center shadow-sm active:scale-95 transition-transform" data-dest="search">
+                    🔍 Tìm phòng
+                </button>
+            </div>
+        </div>
     </main>
 
     <!-- MODAL HIỂN THỊ VÀ XUẤT ẢNH MÃ QR IN ẤN -->
@@ -625,7 +653,7 @@
     let initMapY = 0;
     let isPinching = false;
     let isRotationLocked = false;
-    let isVoiceSpeaking = false;
+    let isVoiceSpeaking = true;
     let lastSaveTime = 0;
 
     const floors = [
@@ -788,18 +816,24 @@
                             if (qrLocationId && nodes[qrLocationId]) {
                                 localStartId = qrLocationId; 
                                 localStorage.setItem('ind_local_start_id', qrLocationId); 
+                                currentFloorId = nodes[qrLocationId].floor;
                                 
                                 setTimeout(() => {
                                     renderNodes();
+                                    focusSingleNode(nodes[qrLocationId]);
                                     showMsg(`📍 Đã định vị tại: ${nodes[qrLocationId].label.toUpperCase()}`);
                                     
-                                    setTimeout(() => {
+                                    searchInput.placeholder = `Bạn muốn đi đâu từ [${nodes[qrLocationId].label}]?`;
+
+                                    if (window.innerWidth >= 1024) {
                                         toggleSidebar(true);
                                         sidebarEndInput.placeholder = `Bạn muốn đi đâu từ [${nodes[qrLocationId].label}]?`;
                                         sidebarEndInput.focus();
                                         showLocationSuggestions("", sidebarEndSuggestions, 'end');
-                                    }, 800);
-                                }, 600);
+                                    } else {
+                                        showMobileCheckinBanner(nodes[qrLocationId]);
+                                    }
+                                }, 500);
                             }
                             hasProcessedQR = true;
                         }
@@ -2084,9 +2118,15 @@
             fastSwitchBtn.classList.add('hidden');
         }
 
-        // Tự động phát giọng nói nếu đang bật
+        // Ẩn banner check-in QR nếu đang mở
+        const qrBanner = document.getElementById('mobile-qr-checkin-banner');
+        if (qrBanner) qrBanner.classList.add('hidden');
+
+        // Tự động phát giọng nói nếu đang bật (mặc định BẬT)
         if (isVoiceSpeaking) {
-            speakRouteGuidance(stepList);
+            setTimeout(() => {
+                speakRouteGuidance(stepList);
+            }, 300);
         }
     }
 
@@ -2094,22 +2134,83 @@
         if (!('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel();
         
-        const textToSpeak = `Đang hướng dẫn chỉ đường đến ${nodes[localEndId]?.label || 'đích đến'}. ` + 
-            stepList.map(s => s.replace(/<[^>]+>/g, '')).join('. ');
+        const destName = nodes[localEndId]?.label || 'đích đến';
+        const startName = nodes[localStartId]?.label || 'vị trí hiện tại';
+        
+        let speechText = `Đang chỉ đường đến ${destName}. `;
+        stepList.forEach(s => {
+            const cleanText = s.replace(/<[^>]+>/g, '').replace(/^\d+\.\s*/, '');
+            speechText += cleanText + ". ";
+        });
 
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        const utterance = new SpeechSynthesisUtterance(speechText);
         utterance.lang = 'vi-VN';
         utterance.rate = 1.0;
-        
+        utterance.pitch = 1.0;
+
+        const voices = window.speechSynthesis.getVoices();
+        const viVoice = voices.find(v => v.lang === 'vi-VN' || v.lang.startsWith('vi') || v.name.toLowerCase().includes('vietnam') || v.name.toLowerCase().includes('vietnamese'));
+        if (viVoice) utterance.voice = viVoice;
+
+        utterance.onstart = () => {
+            const waves = document.getElementById('voice-waves');
+            if (waves) waves.classList.remove('hidden');
+        };
         utterance.onend = () => {
-            document.getElementById('voice-waves').classList.add('hidden');
+            const waves = document.getElementById('voice-waves');
+            if (waves) waves.classList.add('hidden');
         };
         utterance.onerror = () => {
-            document.getElementById('voice-waves').classList.add('hidden');
+            const waves = document.getElementById('voice-waves');
+            if (waves) waves.classList.add('hidden');
         };
 
-        document.getElementById('voice-waves').classList.remove('hidden');
         window.speechSynthesis.speak(utterance);
+    }
+
+    function showMobileCheckinBanner(node) {
+        if (!node) return;
+        const banner = document.getElementById('mobile-qr-checkin-banner');
+        if (!banner) return;
+        
+        const floorObj = floors.find(f => f.id === node.floor) || { area: '', name: node.floor };
+        document.getElementById('mobile-qr-loc-name').innerText = `${node.label} (${floorObj.name})`;
+        banner.classList.remove('hidden');
+
+        document.querySelectorAll('.mobile-dest-quick-btn').forEach(btn => {
+            btn.onclick = () => {
+                const destType = btn.dataset.dest;
+                if (destType === 'search') {
+                    banner.classList.add('hidden');
+                    searchInput.focus();
+                    showLocationSuggestions("", suggestionsBox, 'end');
+                    return;
+                }
+
+                const availableNodes = Object.values(nodes).filter(n => {
+                    if (destType === 'wc') return n.customIcon === '🚻' || (n.label && n.label.includes('TOILET')) || (n.label && n.label.includes('VỆ SINH'));
+                    if (destType === 'canteen') return n.customIcon === '☕' || (n.label && n.label.includes('CANTIN')) || (n.label && n.label.includes('CĂN TIN'));
+                    if (destType === 'parking') return (n.label && n.label.includes('BÃI XE')) || n.customIcon === '🅿';
+                    return false;
+                });
+
+                if (availableNodes.length > 0) {
+                    let target = availableNodes.find(n => n.floor === currentFloorId) || availableNodes[0];
+                    localEndId = target.id;
+                    navigationActive = false;
+                    banner.classList.add('hidden');
+                    buildQrLocationSelector();
+                    updateRouteAndUI();
+                    showMsg(`Đang dẫn đường tới [${target.label}]`);
+                } else {
+                    showMsg("Không tìm thấy vị trí tiện ích phù hợp!", false);
+                }
+            };
+        });
+
+        document.getElementById('btn-close-qr-banner').onclick = () => {
+            banner.classList.add('hidden');
+        };
     }
 
     document.getElementById('btn-voice-guide').onclick = () => {
@@ -2672,6 +2773,10 @@
         loadFloorRotationState(); 
         setupInitialView();
         mapImage.onload = () => setupInitialView();
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+            window.speechSynthesis.getVoices();
+        }
         window.onresize = () => {
             if (window.innerWidth !== lastWidth) {
                 lastWidth = window.innerWidth;
