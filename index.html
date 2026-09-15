@@ -73,7 +73,16 @@
             transform-origin: 0 0;
             left: 0; top: 0;
             will-change: transform;
+            transform: translateZ(0);
+            backface-visibility: hidden;
             flex-shrink: 0;
+        }
+
+        #map-image {
+            will-change: transform, opacity;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            image-rendering: -webkit-optimize-contrast;
         }
 
         .map-label {
@@ -668,6 +677,24 @@
         { id: 'C-G', area: 'Khu C', name: 'Tầng Trệt', image: 'img/map.png' },
         { id: 'D-G', area: 'Khu D', name: 'Tầng Trệt', image: 'img/map.png' }
     ];
+
+    // BỘ ĐỆM PRELOAD TOÀN BỘ ẢNH TẦNG VÀ TOÀN CẢNH (LOAD TỨC THÌ 0MS)
+    const imageCache = {};
+    function preloadAllFloorImages() {
+        floors.forEach(f => {
+            if (f.image && !imageCache[f.image]) {
+                const img = new Image();
+                img.src = f.image;
+                if (img.decode) img.decode().catch(() => {});
+                imageCache[f.image] = img;
+            }
+        });
+        const tq = new Image();
+        tq.src = 'img/tongquan.jpg';
+        if (tq.decode) tq.decode().catch(() => {});
+        imageCache['img/tongquan.jpg'] = tq;
+    }
+    preloadAllFloorImages();
 
     const viewport = document.getElementById('viewport');
     const mapContainer = document.getElementById('map-container');
@@ -1448,7 +1475,22 @@
         
         const currentFloor = floors.find(x => x.id === currentFloorId);
         if (mapImage.getAttribute('src') !== currentFloor.image) {
-            mapImage.src = currentFloor.image;
+            const targetSrc = currentFloor.image;
+            if (imageCache[targetSrc] && imageCache[targetSrc].complete) {
+                mapImage.src = targetSrc;
+            } else {
+                const temp = new Image();
+                temp.src = targetSrc;
+                if (temp.decode) {
+                    temp.decode().then(() => {
+                        if (currentFloorId === currentFloor.id) mapImage.src = targetSrc;
+                    }).catch(() => {
+                        mapImage.src = targetSrc;
+                    });
+                } else {
+                    mapImage.src = targetSrc;
+                }
+            }
         }
 
         renderNodes(); 

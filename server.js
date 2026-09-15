@@ -40,10 +40,13 @@ const server = http.createServer((req, res) => {
         const ext = path.extname(filePath).toLowerCase();
         const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
+        const isStaticAsset = ['.png', '.jpg', '.jpeg', '.svg', '.js', '.css', '.ico'].includes(ext);
+        const cacheControl = isStaticAsset ? 'public, max-age=86400' : 'no-cache';
+
         res.writeHead(200, {
             'Content-Type': contentType,
             'Access-Control-Allow-Origin': '*',
-            'Cache-Control': 'no-cache'
+            'Cache-Control': cacheControl
         });
 
         fs.createReadStream(filePath).pipe(res);
